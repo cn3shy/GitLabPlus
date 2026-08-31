@@ -1,0 +1,25 @@
+src/main/resources/META-INF/pluginIcon.svg
+  s_95dd3526b4e453::t_54cec3e8729a87 1
+src/main/resources/icons/createMr.svg
+  s_95dd3526b4e453::t_b5f390299f4e33 1
+.github/workflows/build.yml
+  s_95dd3526b4e453::t_1c2114fc884b7d 1-61
+src/main/resources/META-INF/plugin.xml
+  s_95dd3526b4e453::t_4d10b495e95a73 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "275a94be84978f5746c154f628165926e7f00051",
+  "prompts": {},
+  "sessions": {
+    "s_95dd3526b4e453": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b27ef8be-f97b-4b71-a3dc-d95b27d22738",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
