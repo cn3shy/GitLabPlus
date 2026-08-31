@@ -42,9 +42,4 @@ intellijPlatform {
             untilBuild = provider { null }
         }
     }
-
-    publishing {
-        // JetBrains Marketplace 发布 token,仅 CI 环境变量提供(本地不发布)
-        token = providers.environmentVariable("PUBLISH_TOKEN")
-    }
 }

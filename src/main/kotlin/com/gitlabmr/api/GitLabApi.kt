@@ -14,6 +14,9 @@ import com.intellij.openapi.diagnostic.logger
 
 private val LOG = logger<GitLabApi>()
 
+/** MR 标题生成时排除的 commit 前缀 (不区分大小写) —— 机器人提交与琐碎更新不参与标题 */
+private val EXCLUDED_COMMIT_PREFIXES = listOf("merge", "jenkins", "update")
+
 /**
  * 封装 GitLab REST API 调用，对应 Python 版中多个 fetch_* 函数。
  *
@@ -241,7 +244,10 @@ class GitLabApi(
             val commits = obj.get("commits")?.asJsonArray ?: return emptyList()
             commits.mapNotNull { c ->
                 c.asJsonObject.get("title")?.asString?.trim()
-            }.filter { it.isNotEmpty() && !it.startsWith("Merge") }
+            }.filter { subject ->
+                subject.isNotEmpty() &&
+                    EXCLUDED_COMMIT_PREFIXES.none { subject.startsWith(it, ignoreCase = true) }
+            }
         } catch (e: Exception) {
             emptyList()
         }

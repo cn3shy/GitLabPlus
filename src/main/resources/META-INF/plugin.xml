@@ -16,6 +16,10 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <b>1.2.5</b> –
+        <ul>
+            <li>MR 标题生成过滤 merge / jenkins / update 开头的提交 (不区分大小写)，机器人与琐碎提交不再进入标题</li>
+        </ul>
         <b>1.2.4</b> –
         <ul>
             <li>统一 Token 存储标识：创建 MR 读取与设置页管理使用同一 key (规范化 + 带端口)，不再读取早期版本遗留的无端口记录</li>
