@@ -1,0 +1,90 @@
+<idea-plugin>
+    <id>com.gitlabmr.mrplugin</id>
+    <name>GitLabPlus</name>
+    <vendor email="cn3shy@qq.com" url="https://github.com/cn3shy/">cn3shy</vendor>
+
+    <description><![CDATA[
+        <h3>GitLabPlus</h3>
+        <p>在 IntelliJ IDEA 中快速创建 GitLab Merge Request。</p>
+        <ul>
+            <li>自动识别当前项目的 GitLab 远程仓库</li>
+            <li>基于源/目标分支差异 commit 自动生成 MR 标题</li>
+            <li>支持分支规则校验（主干分支只能作为目标分支）</li>
+            <li>记住上次使用的分支和审核人</li>
+            <li>下拉选择审核人（自动获取项目成员）</li>
+        </ul>
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <b>1.2.4</b> –
+        <ul>
+            <li>统一 Token 存储标识：创建 MR 读取与设置页管理使用同一 key (规范化 + 带端口)，不再读取早期版本遗留的无端口记录</li>
+        </ul>
+        <b>1.2.3</b> –
+        <ul>
+            <li>修复设置页删除 Token 不生效：兼容历史遗留的带协议前缀 host 记录，删除时新旧 key 一并清除，并自动迁移旧格式数据</li>
+        </ul>
+        <b>1.2.2</b> –
+        <ul>
+            <li>移除运行时的 Token 输入弹窗 —— Token 统一在 Settings → Tools → GitLab MR 中配置；未配置或 Token 失效时通过通知引导，可一键打开设置页</li>
+            <li>修复设置页删除 Token 不生效的问题 (PasswordSafe 内存缓存导致旧值仍可读取)</li>
+        </ul>
+        <b>1.2.1</b> –
+        <ul>
+            <li>移除 Git (VCS) 菜单入口，仅保留 Tools 菜单</li>
+            <li>设置页新增"项目记忆"页签：查看 / 编辑各项目上次使用的源/目标分支与审核人</li>
+            <li>设置页新增"查看"按钮，可查看已保存的 Token 明文</li>
+            <li>修复：Token 保存后立即持久化，重开设置页 / 重启 IDE 不再丢失</li>
+            <li>Token 地址自动规范化 (去掉协议前缀)</li>
+            <li>MR 创建成功改为通知气泡显示，支持点击链接直接打开 MR 页面</li>
+        </ul>
+        <b>1.2.0</b> –
+        <ul>
+            <li>新增 Settings 页面 (Settings → Tools → GitLab MR):可随时添加 / 修改 / 删除各 GitLab 服务器的 Token</li>
+            <li>多仓库项目中自动定位当前打开文件 / 当前项目窗口所属的 Git 仓库</li>
+            <li>所有弹窗标题显示所选择的 Git 仓库名称</li>
+        </ul>
+        <b>1.1.1</b> –
+        <ul>
+            <li>分支列表 / 项目成员分页拉取全部 (修复分支多于 100 条时列表不全的问题)</li>
+        </ul>
+        <b>1.1.0</b> –
+        <ul>
+            <li>修复远程仓库带自定义端口时无法连接的问题 (如 http://git.example.com:9000)</li>
+            <li>修复插件未显示在 Tools 菜单的问题</li>
+            <li>源/目标分支取消主干过滤，均展示全部远程分支</li>
+            <li>标题改为点击"重新生成"按钮时才调用 API 生成</li>
+        </ul>
+        <b>1.0.0</b> – 初始版本，从 Python CLI 迁移为 IDEA 插件。
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.vcs</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+            serviceImplementation="com.gitlabmr.config.GitLabMrConfigService"/>
+        <applicationConfigurable
+            id="com.gitlabmr.settings"
+            parentId="tools"
+            displayName="GitLab MR"
+            instance="com.gitlabmr.config.GitLabMrSettingsConfigurable"/>
+        <notificationGroup id="GitLab MR" displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <!-- Action 只定义一次；一个 action/group 只能有一个父菜单，需挂多个菜单时用独立的 group + reference -->
+        <action id="GitLabMr.Create"
+                class="com.gitlabmr.action.CreateMrAction"
+                text="创建 Merge Request"
+                description="为当前项目创建 GitLab Merge Request">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift M"/>
+        </action>
+
+        <group id="GitLabMr.ToolsGroup" text="GitLab MR" description="GitLab Merge Request 工具" popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <reference id="GitLabMr.Create"/>
+        </group>
+    </actions>
+</idea-plugin>

@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+.intellijPlatform/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Temp
+.temp/
+
+# Kotlin
+*.kotlin_metadata
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+*.zip
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
