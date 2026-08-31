@@ -77,6 +77,7 @@
         <!-- Action 只定义一次；一个 action/group 只能有一个父菜单，需挂多个菜单时用独立的 group + reference -->
         <action id="GitLabMr.Create"
                 class="com.gitlabmr.action.CreateMrAction"
+                icon="/icons/createMr.svg"
                 text="创建 Merge Request"
                 description="为当前项目创建 GitLab Merge Request">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift M"/>
