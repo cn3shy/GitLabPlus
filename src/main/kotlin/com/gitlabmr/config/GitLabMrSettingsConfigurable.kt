@@ -29,7 +29,7 @@ import javax.swing.table.DefaultTableModel
  * - Access Token:各 GitLab 服务器的 Personal Access Token 的添加 / 修改 / 查看 / 删除
  * - 项目记忆:各项目上次使用的源/目标分支与审核人,可编辑或清除
  *
- * Token 存于 IDE 的 PasswordSafe (加密密钥库);所有操作即时生效。
+ * Token 保存在插件本机配置文件中 (XML state);所有操作即时生效。
  */
 class GitLabMrSettingsConfigurable : Configurable {
 

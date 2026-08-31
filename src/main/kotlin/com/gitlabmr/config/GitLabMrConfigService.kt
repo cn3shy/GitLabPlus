@@ -1,7 +1,6 @@
 package com.gitlabmr.config
 
 import com.intellij.credentialStore.CredentialAttributes
-import com.intellij.credentialStore.Credentials
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
@@ -12,8 +11,9 @@ import com.intellij.openapi.components.State
 /**
  * 插件级持久化配置。
  *
- * - Token 保存在 IDE 的 PasswordSafe (加密密钥库) 中，不再以明文 JSON 存储。
- * - 分支记忆 / 审核人记忆以 XML state 持久化。
+ * - Token 直接保存在插件 XML state (本机配置文件) 中，不再依赖 PasswordSafe 等凭证后端，
+ *   避免 IDE/插件升级后凭证库读取失败导致 Token "丢失"需要重新配置。
+ * - 分支记忆 / 审核人记忆同样以 XML state 持久化。
  *
  * 与 Python 版 [~/.gitlab_mr_config.json] 对应。
  */
@@ -31,7 +31,9 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         var lastReviewers: MutableMap<String, String> = mutableMapOf(),
         /** key = "$host/$projectPath" */
         var lastBranches: MutableMap<String, BranchEntry> = mutableMapOf(),
-        /** 已保存过 Token 的 GitLab 服务器地址 (Token 本体在 PasswordSafe 中，此处仅记录 host 供设置页展示) */
+        /** key = 规范化后的 host，value = Personal Access Token (明文存于本机 XML) */
+        var tokens: MutableMap<String, String> = mutableMapOf(),
+        /** 已保存过 Token 的 GitLab 服务器地址 (供设置页展示) */
         var knownHosts: MutableSet<String> = mutableSetOf(),
     )
 
@@ -43,7 +45,7 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     }
 
     // ------------------------------------------------------------------ //
-    //  Token  (PasswordSafe)
+    //  Token  (插件 XML state；PasswordSafe 仅作历史遗留数据迁移来源)
     // ------------------------------------------------------------------ //
 
     private fun credentialAttributes(host: String): CredentialAttributes =
@@ -52,71 +54,89 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         CredentialAttributes("GitLabMR-$host", null, null, true)
 
     /**
-     * 读取指定 host 对应的 Personal Access Token
+     * 读取指定 host 对应的 Personal Access Token。
+     *
+     * 优先读插件 XML state；无值时回退读 PasswordSafe (历史版本的存储位置)，
+     * 读到即自动搬进 XML 并清理 PasswordSafe，旧版本升级后首次读取即完成迁移。
      */
     fun loadToken(host: String): String? {
-        return try {
-            PasswordSafe.instance.getPassword(credentialAttributes(host))?.takeIf { it.isNotBlank() }
+        val key = normalizeHost(host)
+        state.tokens[key]?.takeIf { it.isNotBlank() }?.let { return it }
+        val legacy = try {
+            PasswordSafe.instance.getPassword(credentialAttributes(key))?.takeIf { it.isNotBlank() }
         } catch (e: Exception) {
             null
         }
+        if (legacy != null) {
+            state.tokens[key] = legacy
+            clearLegacyPasswordSafe(key)
+            saveStateNow()
+        }
+        return legacy
     }
 
     /**
-     * 保存 Token 到 PasswordSafe (token 为空串表示清空该 host 的记录)
+     * 保存 Token 到插件 XML state (token 为空串表示清空该 host 的记录)，
+     * 同时清理历史版本遗留在 PasswordSafe 中的条目
      */
     fun saveToken(host: String, token: String) {
         val normalized = normalizeHost(host)
-        val attrs = credentialAttributes(normalized)
         if (token.isEmpty()) {
-            PasswordSafe.instance.set(attrs, null)
+            state.tokens.remove(normalized)
         } else {
-            PasswordSafe.instance.set(attrs, Credentials(null, token))
+            state.tokens[normalized] = token
+            state.knownHosts.add(normalized)
         }
-        state.knownHosts.add(normalized)
+        clearLegacyPasswordSafe(normalized)
         saveStateNow()
     }
 
     /**
-     * 删除指定 host 的 Token (PasswordSafe + host 记录)
+     * 删除指定 host 的 Token (XML state + 历史 PasswordSafe 遗留条目)
      *
      * 兼容历史数据：旧版本可能以未规范化的 host (带协议前缀) 存储，
      * 因此原始字符串与规范化后的 key 都要删一遍。
      */
     fun removeToken(host: String) {
         for (key in setOf(host.trim(), normalizeHost(host))) {
-            PasswordSafe.instance.set(credentialAttributes(key), null)
+            state.tokens.remove(key)
             state.knownHosts.remove(key)
+            clearLegacyPasswordSafe(key)
         }
         saveStateNow()
     }
 
+    /** 清理历史版本遗留在 PasswordSafe 中的 Token 条目 (幂等，凭证库不可用时忽略) */
+    private fun clearLegacyPasswordSafe(host: String) {
+        try {
+            PasswordSafe.instance.set(credentialAttributes(host), null)
+        } catch (e: Exception) {
+            // XML 中已是权威数据，清理失败不影响功能
+        }
+    }
+
     /**
-     * 迁移历史遗留的未规范化 host 记录 (如 "http://git.example.com:9000"):
-     * - knownHosts 条目规范化
-     * - PasswordSafe 中的 Token 搬到规范化 key 下 (若新 key 尚无值) 并删除旧 key
-     *
-     * 幂等，无遗留数据时零开销。
+     * 迁移历史遗留数据 (幂等，无遗留时零开销)：
+     * - 未规范化的 host 记录 (如 "http://git.example.com:9000") 规范化，
+     *   XML 中对应 Token 搬到规范化 key 下
+     * - 仍只存在于 PasswordSafe 的 Token 经 [loadToken] 懒迁移搬进 XML
      */
     fun migrateLegacyHosts() {
         val legacy = state.knownHosts.filter { it != normalizeHost(it) }
-        if (legacy.isEmpty()) return
+        val hasTokenlessHost = state.knownHosts.any { state.tokens[it].isNullOrBlank() }
+        if (legacy.isEmpty() && !hasTokenlessHost) return
         for (old in legacy) {
             val normalized = normalizeHost(old)
-            val legacyValue = try {
-                PasswordSafe.instance.getPassword(credentialAttributes(old))
-            } catch (e: Exception) {
-                null
+            if (!state.tokens[old].isNullOrBlank() && state.tokens[normalized].isNullOrBlank()) {
+                state.tokens[normalized] = state.tokens[old]!!
             }
-            if (!legacyValue.isNullOrBlank() && loadToken(normalized).isNullOrBlank()) {
-                PasswordSafe.instance.set(
-                    credentialAttributes(normalized), Credentials(null, legacyValue)
-                )
-            }
-            PasswordSafe.instance.set(credentialAttributes(old), null)
+            state.tokens.remove(old)
+            clearLegacyPasswordSafe(old)
             state.knownHosts.remove(old)
             state.knownHosts.add(normalized)
         }
+        // 缺 Token 的 host 触发一次懒迁移 (从 PasswordSafe 搬进 XML)
+        for (host in state.knownHosts) loadToken(host)
         saveStateNow()
     }
 

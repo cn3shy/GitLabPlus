@@ -16,6 +16,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <b>1.2.6</b> –
+        <ul>
+            <li>Token 改为保存在插件本机配置文件中，不再依赖 IDE 凭证后端 (PasswordSafe) —— 升级插件后不再需要重新配置 Access Token</li>
+            <li>历史已保存的 Token 自动迁移，无需任何手动操作</li>
+        </ul>
         <b>1.2.5</b> –
         <ul>
             <li>MR 标题生成过滤 merge / jenkins / update 开头的提交 (不区分大小写)，机器人与琐碎提交不再进入标题</li>
