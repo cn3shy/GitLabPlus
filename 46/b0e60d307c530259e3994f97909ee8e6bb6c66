@@ -1,0 +1,27 @@
+README.md
+  s_95dd3526b4e453::t_fb3a698938500e 49-58
+  s_95dd3526b4e453::t_2ca197481a13c0 14-15
+  s_95dd3526b4e453::t_69bd31f1ef92e9 59
+.github/workflows/build.yml
+  s_95dd3526b4e453::t_1c2114fc884b7d 1-61
+build.gradle.kts
+  s_95dd3526b4e453::t_e42572b7316d66 47-73
+  s_95dd3526b4e453::t_6c70ba3d3af648 4,8-9
+  s_95dd3526b4e453::t_6bfad16ba0e4ae 74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "46b0e60d307c530259e3994f97909ee8e6bb6c66",
+  "prompts": {},
+  "sessions": {
+    "s_95dd3526b4e453": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b27ef8be-f97b-4b71-a3dc-d95b27d22738",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
