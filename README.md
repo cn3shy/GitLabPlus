@@ -52,10 +52,16 @@ GitHub Actions（`.github/workflows/build.yml`）：
 
 - **推送到 `main` 或手动触发**：自动构建，插件 zip 上传到 Actions Artifacts（保留 30 天）
 - **打 `v*` tag**（如 `v1.2.4`）：除构建外，还会——
-  - 将插件 zip 发布到 GitHub Packages（Maven 仓库 `maven.pkg.github.com/cn3shy/GitLabPlus`，包版本取 tag 号）
-  - 创建 GitHub Release 并附上 zip，可直接下载安装
+  - 自动创建 GitHub Release 并附上插件 zip，可直接下载安装
+  - 发布到 JetBrains Marketplace（IDE 内可搜索安装并自动更新）；需配置 `PUBLISH_TOKEN`，未配置时此步自动跳过
 
-> 包版本号统一维护在 `gradle.properties` 的 `pluginVersion`，发版时改它并打对应 tag。GitHub Packages 同一版本不可重复发布，所以发布只在打 tag 时进行。
+> 版本号统一维护在 `gradle.properties` 的 `pluginVersion`，发版时改它并打对应 tag（CI 会用 tag 号强制覆盖构建版本）。
+
+### 配置 Marketplace 发布 Token
+
+1. 在 [plugins.jetbrains.com](https://plugins.jetbrains.com/) 头像 → Settings → Marketplace Profile → My Tokens → Generate new token（勾选 Plugin Publishing 权限）
+2. 仓库 Settings → Secrets and variables → Actions → New repository secret，名称 `PUBLISH_TOKEN`
+3. 之后打 `v*` tag 即自动发布；首次发布需 Marketplace 人工审核（通常 1~2 天），通过后新版本自动上架
 
 ## 配置
 

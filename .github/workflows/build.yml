@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write   # tag 触发时创建 GitHub Release
-  packages: write   # 发布到 GitHub Packages
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,8 +32,14 @@ jobs:
           validate-wrappers: true
 
       # 首次构建会下载 IntelliJ IDEA Community 2023.1 (约 1GB),之后由 Gradle 缓存加速
+      # 打 tag 时用 tag 号强制覆盖版本,保证 Release 附件 / Marketplace 版本与 tag 一致
       - name: Build plugin
-        run: ./gradlew buildPlugin
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            ./gradlew buildPlugin "-PpluginVersion=${GITHUB_REF_NAME#v}"
+          else
+            ./gradlew buildPlugin
+          fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -44,18 +49,17 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # GitHub Packages 的 Maven 版本不可覆盖:同一版本重复发布直接报错,
-      # 因此仅在打 tag 时发布,tag v1.2.4 → 包版本 1.2.4
-      - name: Publish to GitHub Packages
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: ./gradlew publish "-PpluginVersion=${GITHUB_REF_NAME#v}"
-
       # 插件 zip 挂到 Release,用户无需认证即可下载安装
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "$GITHUB_REF_NAME" --generate-notes build/distributions/*.zip
+
+      # 发布到 JetBrains Marketplace(IDE 内可搜索安装并自动更新)
+      # 需在仓库 Secrets 配置 PUBLISH_TOKEN;未配置时此步自动跳过,不影响 Release 发布
+      - name: Publish to JetBrains Marketplace
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.PUBLISH_TOKEN != ''
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: ./gradlew publishPlugin "-PpluginVersion=${GITHUB_REF_NAME#v}"
