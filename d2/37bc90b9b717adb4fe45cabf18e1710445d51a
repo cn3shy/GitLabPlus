@@ -1,0 +1,27 @@
+src/main/kotlin/com/gitlabmr/api/GitLabApi.kt
+  s_95dd3526b4e453::t_9a6f2b8ab54b8a 247-250
+  s_95dd3526b4e453::t_f6149dda15f3e2 17-19
+.github/workflows/build.yml
+  s_95dd3526b4e453::t_7c2fe65732abdc 59-79
+README.md
+  s_95dd3526b4e453::t_7abdc2abdcf683 23
+  s_95dd3526b4e453::t_254729627807b3 45-54,64-65
+src/main/resources/META-INF/plugin.xml
+  s_95dd3526b4e453::t_66f8ba989bccc8 19-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "d237bc90b9b717adb4fe45cabf18e1710445d51a",
+  "prompts": {},
+  "sessions": {
+    "s_95dd3526b4e453": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b27ef8be-f97b-4b71-a3dc-d95b27d22738",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
