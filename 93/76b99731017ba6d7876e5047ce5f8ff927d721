@@ -1,0 +1,25 @@
+README.md
+  s_71cd0cc007fabe::t_2e4987b413b701 73
+  s_71cd0cc007fabe::t_7b4b07cde753b3 21,28,30,32-34
+src/main/resources/META-INF/plugin.xml
+  s_71cd0cc007fabe::t_5d92b3b204122e 90,96-101
+  s_71cd0cc007fabe::t_073c760892bd88 19-22
+gradle.properties
+  s_71cd0cc007fabe::t_7dc14045123e47 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "9376b99731017ba6d7876e5047ce5f8ff927d721",
+  "prompts": {},
+  "sessions": {
+    "s_71cd0cc007fabe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f66d08e0-6a82-4500-912a-04f3c0443957",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
