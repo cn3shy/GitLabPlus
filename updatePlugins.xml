@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugins>
-    <plugin id="com.gitlabmr.mrplugin" name="GitLabPlus" version="1.2.6" url="https://github.com/cn3shy/GitLabPlus/releases/download/v1.2.6/GitLabPlus-1.2.6.zip">
+    <plugin id="com.gitlabmr.mrplugin" name="GitLabPlus" version="1.2.7" url="https://github.com/cn3shy/GitLabPlus/releases/download/v1.2.7/GitLabPlus-1.2.7.zip">
         <idea-version since-build="231"/>
-        <change-notes><![CDATA[GitLabPlus 1.2.6]]></change-notes>
+        <change-notes><![CDATA[GitLabPlus 1.2.7]]></change-notes>
     </plugin>
 </plugins>
