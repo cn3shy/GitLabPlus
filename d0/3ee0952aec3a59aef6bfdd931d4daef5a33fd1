@@ -1,0 +1,24 @@
+build.gradle.kts
+  s_95dd3526b4e453::t_50e409fb34551f 46-48
+README.md
+  s_95dd3526b4e453::t_b7a3ccadc0cea9 55-56,58-64
+.github/workflows/build.yml
+  s_95dd3526b4e453::t_595b1933576741 58-65
+  s_95dd3526b4e453::t_e9c35797b821de 35,37-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "d03ee0952aec3a59aef6bfdd931d4daef5a33fd1",
+  "prompts": {},
+  "sessions": {
+    "s_95dd3526b4e453": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b27ef8be-f97b-4b71-a3dc-d95b27d22738",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
