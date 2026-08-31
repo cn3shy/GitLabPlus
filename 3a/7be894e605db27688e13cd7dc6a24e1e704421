@@ -1,0 +1,65 @@
+gradle.properties
+  s_95dd3526b4e453::t_447b22fa49ba4c 1
+  s_95dd3526b4e453::t_0d7d67757c98ab 2-4
+  s_95dd3526b4e453::t_5f8c3ecae458d9 5-15
+.gitignore
+  s_95dd3526b4e453::t_1d8a26a975aa8e 26
+  s_95dd3526b4e453::t_7a3e6197fa51a5 4-14
+  s_95dd3526b4e453::t_8d2c2af6c85ae0 1-3
+  s_95dd3526b4e453::t_aa087cf5b04079 15-17,23-25
+  s_95dd3526b4e453::t_90d50b9b9090f7 18-22
+settings.gradle.kts
+  s_95dd3526b4e453::t_de6fd4f5bc7c51 1
+src/main/resources/META-INF/plugin.xml
+  s_95dd3526b4e453::t_66928ac5488181 7
+  s_95dd3526b4e453::t_012ed21a99731b 3
+  s_95dd3526b4e453::t_9cd48b6520b434 1-2
+  s_95dd3526b4e453::t_798d147a371ef9 4-6
+  s_95dd3526b4e453::t_3fb5e0d5dd25a4 8-10
+  s_95dd3526b4e453::t_f505152412ad5a 11-90
+README.md
+  s_95dd3526b4e453::t_9819890dc68db1 12
+  s_95dd3526b4e453::t_138bc1db037dea 9-11
+  s_95dd3526b4e453::t_a87a493883fdf5 13-15
+  s_95dd3526b4e453::t_f0c5403d719636 1-8,16-58
+build.gradle.kts
+  s_95dd3526b4e453::t_79d29d6d13dadb 1-44
+gradle/wrapper/gradle-wrapper.properties
+  s_95dd3526b4e453::t_bb69ef564a9e9a 1-9
+gradlew
+  s_95dd3526b4e453::t_b22cfa2ebce4f5 1-248
+gradlew.bat
+  s_95dd3526b4e453::t_7150212cb6c98d 1-82
+src/main/kotlin/com/gitlabmr/action/CreateMrAction.kt
+  s_95dd3526b4e453::t_803dd83e9139dd 1-284
+src/main/kotlin/com/gitlabmr/api/GitLabApi.kt
+  s_95dd3526b4e453::t_082aedbdc874b0 1-285
+src/main/kotlin/com/gitlabmr/config/GitLabMrConfigService.kt
+  s_95dd3526b4e453::t_6c3f6c6c02839f 1-204
+src/main/kotlin/com/gitlabmr/config/GitLabMrSettingsConfigurable.kt
+  s_95dd3526b4e453::t_daaf6efb836e9e 1-332
+src/main/kotlin/com/gitlabmr/model/Models.kt
+  s_95dd3526b4e453::t_ccde7d3fa2a9a8 1-67
+src/main/kotlin/com/gitlabmr/ui/GitLabMrDialog.kt
+  s_95dd3526b4e453::t_49b3369badfd32 1-174
+src/main/kotlin/com/gitlabmr/util/GitLabUtils.kt
+  s_95dd3526b4e453::t_307948eeefc1ab 1-94
+src/main/kotlin/com/gitlabmr/util/HttpUtils.kt
+  s_95dd3526b4e453::t_96d9753ca24c00 1-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "3a7be894e605db27688e13cd7dc6a24e1e704421",
+  "prompts": {},
+  "sessions": {
+    "s_95dd3526b4e453": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b27ef8be-f97b-4b71-a3dc-d95b27d22738",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
