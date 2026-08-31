@@ -1,0 +1,27 @@
+src/main/resources/META-INF/plugin.xml
+  s_71cd0cc007fabe::t_3aaee23138dcc3 19-23
+gradle.properties
+  s_71cd0cc007fabe::t_10b357f3c56fe4 3
+src/main/kotlin/com/gitlabmr/config/GitLabMrSettingsConfigurable.kt
+  s_71cd0cc007fabe::t_0b6a9a8a43ea51 32
+src/main/kotlin/com/gitlabmr/config/GitLabMrConfigService.kt
+  s_71cd0cc007fabe::t_3553c1ccc5d439 14-16
+  s_71cd0cc007fabe::t_d6f6892f71f44a 48,57-60,63-66,70-75,79-80,85,87-88,90,95,102,104,109-117,119-122,126-127,130-131,133-134,138-139
+  s_71cd0cc007fabe::t_5c9f6543fd7c0c 34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "4c7592cbcedabc7a0fd0ba6ac3adb6b9a538843a",
+  "prompts": {},
+  "sessions": {
+    "s_71cd0cc007fabe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f66d08e0-6a82-4500-912a-04f3c0443957",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
