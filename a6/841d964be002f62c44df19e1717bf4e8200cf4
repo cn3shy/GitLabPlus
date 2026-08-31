@@ -1,0 +1,25 @@
+build.gradle.kts
+  s_95dd3526b4e453::t_6c70ba3d3af648 4,8-9
+  s_95dd3526b4e453::t_e42572b7316d66 47-73
+  s_95dd3526b4e453::t_e706e6f34b5ee1 74
+README.md
+  s_95dd3526b4e453::t_fb3a698938500e 49-58
+  s_95dd3526b4e453::t_2ca197481a13c0 14-15
+  s_95dd3526b4e453::t_75b45adc7619be 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "a6841d964be002f62c44df19e1717bf4e8200cf4",
+  "prompts": {},
+  "sessions": {
+    "s_95dd3526b4e453": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b27ef8be-f97b-4b71-a3dc-d95b27d22738",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
