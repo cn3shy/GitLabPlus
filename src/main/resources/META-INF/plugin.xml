@@ -16,6 +16,10 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <b>1.2.7</b> –
+        <ul>
+            <li>入口调整：移除 Tools 菜单与 Ctrl+Shift+M 快捷键，新增顶部工具栏按钮 (新 UI)、主菜单 Git 菜单、项目右键菜单 Git 子菜单三处入口，图标保持一致</li>
+        </ul>
         <b>1.2.6</b> –
         <ul>
             <li>Token 改为保存在插件本机配置文件中，不再依赖 IDE 凭证后端 (PasswordSafe) —— 升级插件后不再需要重新配置 Access Token</li>
@@ -83,18 +87,18 @@
     </extensions>
 
     <actions>
-        <!-- Action 只定义一次；一个 action/group 只能有一个父菜单，需挂多个菜单时用独立的 group + reference -->
+        <!-- Action 只定义一次，通过多个 add-to-group 挂到不同入口；图标统一取 action 自身，所有入口保持一致 -->
         <action id="GitLabMr.Create"
                 class="com.gitlabmr.action.CreateMrAction"
                 icon="/icons/createMr.svg"
                 text="创建 Merge Request"
                 description="为当前项目创建 GitLab Merge Request">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift M"/>
+            <!-- 主菜单 Git (VCS) 菜单末尾 -->
+            <add-to-group group-id="Git.MainMenu" anchor="last"/>
+            <!-- 新 UI 顶部工具栏右侧按钮区 -->
+            <add-to-group group-id="MainToolbarRight" anchor="last"/>
+            <!-- 项目视图右键菜单 → Git 子菜单 -->
+            <add-to-group group-id="Git.ContextMenu" anchor="last"/>
         </action>
-
-        <group id="GitLabMr.ToolsGroup" text="GitLab MR" description="GitLab Merge Request 工具" popup="true">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
-            <reference id="GitLabMr.Create"/>
-        </group>
     </actions>
 </idea-plugin>

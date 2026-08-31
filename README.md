@@ -18,18 +18,20 @@ AIGC:
 ## 功能
 
 - 自动识别当前项目的 GitLab 远程仓库（支持 HTTPS / SSH URL）
-- 基于 Personal Access Token 认证（Token 加密保存在 IDE 密钥库中）
+- 基于 Personal Access Token 认证（Token 保存在插件本机配置文件中，升级插件无需重新配置）
 - 自动获取远程分支列表和项目成员列表
 - 基于源/目标分支差异 commit 自动生成 MR 标题（自动过滤 merge / jenkins / update 开头的提交）
 - 分支规则校验：主干分支（develop / release / master）只能作为目标分支
 - 记住上次使用的分支和审核人，下次自动填充
 - 下拉选择审核人（自动匹配项目成员）
 
-## 快捷键
+## 入口
 
-`Ctrl+Shift+M` — 打开创建 MR 对话框
+三处入口使用同一图标（创建 Merge Request）：
 
-也可以通过 **VCS → GitLab MR → 创建 Merge Request** 或 **Tools → GitLab MR → 创建 Merge Request** 触发。
+- **顶部工具栏**：主工具栏右侧的 GitLabPlus 按钮
+- **主菜单**：Git（VCS）菜单 → 创建 Merge Request
+- **项目右键菜单**：在 Project 视图右键 → Git → 创建 Merge Request
 
 ## 构建
 
@@ -68,7 +70,7 @@ GitHub Actions（`.github/workflows/build.yml`）：
 
 ## 配置
 
-首次使用时会弹出对话框输入 GitLab Personal Access Token（需在 GitLab → 用户设置 → Access Tokens 中创建，勾选 `api` 权限）。Token 保存在 IDE 的加密密钥库中。
+Token 统一在 **Settings → Tools → GitLab MR** 中配置（需在 GitLab → 用户设置 → Access Tokens 中创建，勾选 `api` 权限）。Token 保存在插件本机配置文件（`options/gitlab-mr-plugin.xml`）中，与 IDE 凭证后端无关，升级插件 / 重启 IDE 均不会丢失；历史版本保存在密钥库中的 Token 会自动迁移。
 
 ## 技术栈
 
