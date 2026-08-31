@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # tag 触发时创建 GitHub Release
+  packages: write   # 发布到 GitHub Packages
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      # 首次构建会下载 IntelliJ IDEA Community 2023.1 (约 1GB),之后由 Gradle 缓存加速
+      - name: Build plugin
+        run: ./gradlew buildPlugin
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GitLabPlus-${{ github.sha }}
+          path: build/distributions/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      # GitHub Packages 的 Maven 版本不可覆盖:同一版本重复发布直接报错,
+      # 因此仅在打 tag 时发布,tag v1.2.4 → 包版本 1.2.4
+      - name: Publish to GitHub Packages
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: ./gradlew publish "-PpluginVersion=${GITHUB_REF_NAME#v}"
+
+      # 插件 zip 挂到 Release,用户无需认证即可下载安装
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes build/distributions/*.zip

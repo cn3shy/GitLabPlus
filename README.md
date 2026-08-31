@@ -11,6 +11,8 @@ AIGC:
 
 # GitLabPlus (IntelliJ IDEA 插件)
 
+[![Build](https://github.com/cn3shy/GitLabPlus/actions/workflows/build.yml/badge.svg)](https://github.com/cn3shy/GitLabPlus/actions/workflows/build.yml)
+
 在 IntelliJ IDEA 中快速创建 GitLab Merge Request，从 Python CLI 脚本迁移而来。
 
 ## 功能
@@ -43,6 +45,17 @@ AIGC:
 1. 构建（或下载 release zip）
 2. IDEA → Settings → Plugins → ⚙ → Install Plugin from Disk → 选择 zip 文件
 3. 重启 IDEA
+
+## CI / 自动发布
+
+GitHub Actions（`.github/workflows/build.yml`）：
+
+- **推送到 `main` 或手动触发**：自动构建，插件 zip 上传到 Actions Artifacts（保留 30 天）
+- **打 `v*` tag**（如 `v1.2.4`）：除构建外，还会——
+  - 将插件 zip 发布到 GitHub Packages（Maven 仓库 `maven.pkg.github.com/cn3shy/GitLabPlus`，包版本取 tag 号）
+  - 创建 GitHub Release 并附上 zip，可直接下载安装
+
+> 包版本号统一维护在 `gradle.properties` 的 `pluginVersion`，发版时改它并打对应 tag。GitHub Packages 同一版本不可重复发布，所以发布只在打 tag 时进行。
 
 ## 配置
 
