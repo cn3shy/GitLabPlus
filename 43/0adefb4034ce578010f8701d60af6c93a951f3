@@ -1,0 +1,21 @@
+src/main/resources/META-INF/plugin.xml
+  s_88f39ee7c186ee::t_917827f1991471 20
+gradle.properties
+  s_88f39ee7c186ee::t_edf07a64bd98dc 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "430adefb4034ce578010f8701d60af6c93a951f3",
+  "prompts": {},
+  "sessions": {
+    "s_88f39ee7c186ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18fc9c2c-26dc-422a-9b32-07aa98a58150",
+        "model": "glm-5.3"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
