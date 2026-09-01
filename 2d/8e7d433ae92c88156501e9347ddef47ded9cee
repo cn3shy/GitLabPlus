@@ -1,0 +1,40 @@
+src/main/kotlin/com/gitlabmr/action/ViewMrAction.kt
+  s_7c5dba3de0a2e4::t_c9b119a2b121ec 37
+  s_7c5dba3de0a2e4::t_145d7307a38f9b 65-69
+  s_7c5dba3de0a2e4::t_7ae1f0f6e328b5 113-114
+src/main/kotlin/com/gitlabmr/ui/GitLabMrListDialog.kt
+  s_7c5dba3de0a2e4::t_6612098cc3447f 157
+  s_7c5dba3de0a2e4::t_8c718ac13a3f24 57,63-64
+  s_7c5dba3de0a2e4::t_1da1d2e66c2a68 147
+  s_7c5dba3de0a2e4::t_5f73aa3cfd70bb 54-55
+  s_7c5dba3de0a2e4::t_fd4df35b927ee1 126-140
+src/main/kotlin/com/gitlabmr/config/GitLabMrConfigService.kt
+  s_7c5dba3de0a2e4::t_d7d6d7439ab9d3 155,160-163,168-175
+  s_7c5dba3de0a2e4::t_67c844aa4fd651 40-43,176-177
+src/main/kotlin/com/gitlabmr/action/CreateMrAction.kt
+  s_7c5dba3de0a2e4::t_94125e6e59924c 59-71
+  s_7c5dba3de0a2e4::t_85a1308e3fc237 270-285
+  s_7c5dba3de0a2e4::t_6ba160d22e1bdf 269
+gradle.properties
+  s_7c5dba3de0a2e4::t_87a52d4a43e8a6 3
+.github/workflows/build.yml
+  s_7c5dba3de0a2e4::t_42ec44d63c9ec4 3,9,34,36
+src/main/resources/META-INF/plugin.xml
+  s_7c5dba3de0a2e4::t_e19916e32c5642 20-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "2d8e7d433ae92c88156501e9347ddef47ded9cee",
+  "prompts": {},
+  "sessions": {
+    "s_7c5dba3de0a2e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "be6eaae6-d232-4ecd-9ebc-829d99889b44",
+        "model": "glm-5.3"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
