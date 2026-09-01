@@ -5,17 +5,23 @@
 
     <description><![CDATA[
         <h3>GitLabPlus</h3>
-        <p>在 IntelliJ IDEA 中快速创建 GitLab Merge Request。</p>
+        <p>在 IntelliJ IDEA 中快速创建 / 查看 GitLab Merge Request。</p>
         <ul>
             <li>自动识别当前项目的 GitLab 远程仓库</li>
             <li>基于源/目标分支差异 commit 自动生成 MR 标题</li>
             <li>支持分支规则校验（主干分支只能作为目标分支）</li>
             <li>记住上次使用的分支和审核人</li>
             <li>下拉选择审核人（自动获取项目成员）</li>
+            <li>查看我创建的与指给我的 Merge Request（按 Group 分组展示，可直达页面）</li>
         </ul>
     ]]></description>
 
     <change-notes><![CDATA[
+        <b>1.3.0</b> –
+        <ul>
+            <li>新增"查看 Merge Request"入口：查询配置服务器上我创建的与指给我的所有 MR，按 Group 分组展示，双击 / 回车在浏览器打开</li>
+            <li>支持按状态筛选 (已打开 / 已合并 / 已关闭 / 全部)，可切换配置列表中的服务器，记住上次选择</li>
+        </ul>
         <b>1.2.7</b> –
         <ul>
             <li>入口调整：移除 Tools 菜单与 Ctrl+Shift+M 快捷键，新增顶部工具栏按钮 (新 UI)、主菜单 Git 菜单、项目右键菜单 Git 子菜单三处入口，图标保持一致</li>
@@ -98,6 +104,17 @@
             <!-- 新 UI 顶部工具栏右侧按钮区 -->
             <add-to-group group-id="MainToolbarRight" anchor="last"/>
             <!-- 项目视图右键菜单 → Git 子菜单 -->
+            <add-to-group group-id="Git.ContextMenu" anchor="last"/>
+        </action>
+
+        <!-- 查看 MR 与创建 MR 使用相同的三处入口，按注册顺序排在"创建"之后 -->
+        <action id="GitLabMr.View"
+                class="com.gitlabmr.action.ViewMrAction"
+                icon="/icons/viewMr.svg"
+                text="查看 Merge Request"
+                description="查看我创建的与指给我的 GitLab Merge Request">
+            <add-to-group group-id="Git.MainMenu" anchor="last"/>
+            <add-to-group group-id="MainToolbarRight" anchor="last"/>
             <add-to-group group-id="Git.ContextMenu" anchor="last"/>
         </action>
     </actions>

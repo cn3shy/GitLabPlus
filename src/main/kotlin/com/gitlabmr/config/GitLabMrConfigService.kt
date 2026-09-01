@@ -35,6 +35,8 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         var tokens: MutableMap<String, String> = mutableMapOf(),
         /** 已保存过 Token 的 GitLab 服务器地址 (供设置页展示) */
         var knownHosts: MutableSet<String> = mutableSetOf(),
+        /** "查看 Merge Request" 上次使用的服务器 (host，可含端口) */
+        var lastViewHost: String = "",
     )
 
     private var state: State = State()
@@ -144,6 +146,17 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
      * 已保存过 Token 的 host 列表 (供设置页展示)
      */
     fun knownHosts(): Set<String> = state.knownHosts
+
+    // ------------------------------------------------------------------ //
+    //  查看 Merge Request (上次选择的服务器)
+    // ------------------------------------------------------------------ //
+
+    fun loadLastViewHost(): String = state.lastViewHost
+
+    fun saveLastViewHost(host: String) {
+        state.lastViewHost = host
+        saveStateNow()
+    }
 
     // ------------------------------------------------------------------ //
     //  项目记忆 (上次分支 / 审核人) —— 供设置页查看与编辑
