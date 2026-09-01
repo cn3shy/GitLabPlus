@@ -7,6 +7,7 @@ import com.gitlabmr.config.GitLabMrConfigService
 import com.gitlabmr.config.GitLabMrSettingsConfigurable
 import com.gitlabmr.model.MrItem
 import com.gitlabmr.model.MrListResult
+import com.gitlabmr.model.MrScopes
 import com.gitlabmr.ui.GitLabMrListDialog
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
@@ -61,8 +62,8 @@ class ViewMrAction : AnAction(
         }
 
         val defaultHost = config.loadLastViewHost().takeIf { it in hosts } ?: hosts.first()
-        val dialog = GitLabMrListDialog(project, hosts, defaultHost) { host, state ->
-            queryMergeRequests(config, host, state)
+        val dialog = GitLabMrListDialog(project, hosts, defaultHost) { host, state, scope ->
+            queryMergeRequests(config, host, state, scope)
         }
         dialog.show()
     }
@@ -72,12 +73,16 @@ class ViewMrAction : AnAction(
     // ------------------------------------------------------------------ //
 
     /**
-     * 查询指定服务器上我创建的 + 指给我的 MR，合并去重
+     * 查询指定服务器上的 MR，合并去重
+     *
+     * @param scope [MrScopes.ALL] 时查询 created_by_me + assigned_to_me 合并，
+     *              否则只查指定范围
      */
     private fun queryMergeRequests(
         config: GitLabMrConfigService,
         host: String,
         state: String,
+        scope: String,
     ): MrListResult {
         val token = config.loadToken(host)
             ?: return MrListResult(null, emptyList(), "尚未配置 \"${host}\" 的 Token", true)
@@ -85,8 +90,13 @@ class ViewMrAction : AnAction(
         val api = GitLabServerApi(host, token)
         return try {
             val user = api.resolveCurrentUser()
-            val created = api.fetchMergeRequests(SCOPE_CREATED_BY_ME, state)
-            val assigned = api.fetchMergeRequests(SCOPE_ASSIGNED_TO_ME, state)
+
+            val created = if (scope != MrScopes.ASSIGNED_TO_ME) {
+                api.fetchMergeRequests(MrScopes.CREATED_BY_ME, state)
+            } else emptyList()
+            val assigned = if (scope != MrScopes.CREATED_BY_ME) {
+                api.fetchMergeRequests(MrScopes.ASSIGNED_TO_ME, state)
+            } else emptyList()
 
             // 两个 scope 合并去重 (web_url 唯一)，同时打上命中标记
             val merged = LinkedHashMap<String, MrItem>()
@@ -96,7 +106,13 @@ class ViewMrAction : AnAction(
             }
 
             config.saveLastViewHost(host)
-            MrListResult(user, merged.values.sortedByDescending { it.updatedAt }, null, false)
+            MrListResult(
+                user = user,
+                items = merged.values.sortedByDescending { it.updatedAt },
+                error = null,
+                tokenProblem = false,
+                truncated = state == "merged" && (created.size >= 100 || assigned.size >= 100),
+            )
         } catch (ex: TokenInvalidException) {
             MrListResult(null, emptyList(), "Token 无效或已过期，请在设置中更新", true)
         } catch (ex: ApiException) {
@@ -125,10 +141,5 @@ class ViewMrAction : AnAction(
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = e.project != null
-    }
-
-    companion object {
-        private const val SCOPE_CREATED_BY_ME = "created_by_me"
-        private const val SCOPE_ASSIGNED_TO_ME = "assigned_to_me"
     }
 }

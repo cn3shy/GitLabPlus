@@ -125,6 +125,16 @@ data class MrItem(
 }
 
 /**
+ * "查看 Merge Request" 的范围过滤选项 (传给全局 /merge_requests 接口的 scope)
+ */
+object MrScopes {
+    /** 全部 = 我创建的 + 指给我的 (两次查询合并) */
+    const val ALL = "all"
+    const val CREATED_BY_ME = "created_by_me"
+    const val ASSIGNED_TO_ME = "assigned_to_me"
+}
+
+/**
  * "查看 Merge Request" 查询结果 (Action 与列表对话框之间传递)
  */
 data class MrListResult(
@@ -132,4 +142,6 @@ data class MrListResult(
     val items: List<MrItem>,
     val error: String?,
     val tokenProblem: Boolean,
+    /** 结果被截断 (已合并状态仅查询前 100 条) */
+    val truncated: Boolean = false,
 )

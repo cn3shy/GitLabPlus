@@ -60,7 +60,10 @@ class GitLabServerApi(
     }
 
     /**
-     * 拉取指定 scope 的全部 Merge Request (分页，按更新时间倒序)
+     * 拉取指定 scope 的 Merge Request (按更新时间倒序)
+     *
+     * 已合并 (merged) 的 MR 通常量大且很少再操作，只拉取前 100 条 (第一页)；
+     * 其余状态分页拉取全部。
      *
      * @param scope created_by_me / assigned_to_me
      * @param state opened / merged / closed / all
@@ -90,6 +93,7 @@ class GitLabServerApi(
                 parseMr(elem)?.let { items.add(it) }
             }
             if (arr.size() < 100) break  // 不足一页，说明已是最后一页
+            if (state == "merged") break  // 已合并只取前 100 条
             page++
         }
         return items

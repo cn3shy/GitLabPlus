@@ -24,15 +24,17 @@ AIGC:
 - 分支规则校验：主干分支（develop / release / master）只能作为目标分支
 - 记住上次使用的分支和审核人，下次自动填充
 - 下拉选择审核人（自动匹配项目成员）
-- 查看 Merge Request：查询配置服务器上**我创建的**与**指给我的** MR，按 Group 分组展示，双击直达 MR 页面（支持按状态筛选）
+- 查看 Merge Request：查询配置服务器上**我创建的**与**指给我的** MR，按目录（Group）分组展示，双击直达 MR 页面
+  - 支持范围单选（全部 / 我创建的 / 指给我的）、状态筛选（已打开 / 已合并 / 已关闭 / 全部）与远程目录过滤
+  - 已合并状态只查询前 100 条（按更新时间倒序）
 
 ## 入口
 
-两个功能各有图标，入口位置相同：
+- **顶部工具栏**：主工具栏右侧的"创建 Merge Request"按钮（保持独立按钮，不进分组）
+- **主菜单**：Git（VCS）菜单 → GitLabPlus → 创建 / 查看 Merge Request
+- **项目右键菜单**：在 Project 视图右键 → Git → GitLabPlus → 创建 / 查看 Merge Request
 
-- **顶部工具栏**：主工具栏右侧的 GitLabPlus 按钮
-- **主菜单**：Git（VCS）菜单 → 创建 Merge Request / 查看 Merge Request
-- **项目右键菜单**：在 Project 视图右键 → Git → 创建 Merge Request / 查看 Merge Request
+> Git 菜单与右键菜单中的两个功能收在同一个 **GitLabPlus** 子菜单中（菜单图标与"创建"一致）。
 
 > "查看 Merge Request" 面向设置页配置列表中已保存 Token 的 GitLab 服务器查询（不依赖当前项目），支持多服务器切换。
 

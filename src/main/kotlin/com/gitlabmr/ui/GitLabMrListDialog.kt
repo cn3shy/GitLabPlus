@@ -2,6 +2,7 @@ package com.gitlabmr.ui
 
 import com.gitlabmr.model.MrItem
 import com.gitlabmr.model.MrListResult
+import com.gitlabmr.model.MrScopes
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
@@ -24,19 +25,20 @@ import java.awt.event.ItemEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
-import javax.swing.JButton
 import javax.swing.Action
-import javax.swing.JPanel
-import javax.swing.JScrollPane
+import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.JPanel
+import javax.swing.JScrollPane
 import javax.swing.JTree
 import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
+import javax.swing.tree.TreePath
 
-/** 状态筛选项 (label 显示 / value 传 API) */
+/** 状态 / 范围下拉选项 (label 显示 / value 传 API) */
 private class StateOption(val label: String, val value: String) {
     override fun toString(): String = label
 }
@@ -50,15 +52,16 @@ private data class ProjectInfo(val path: String, val count: Int)
 /**
  * Merge Request 列表对话框 ("查看 Merge Request")
  *
- * - 顶部：服务器下拉 (设置页配置列表) + 状态筛选 + 刷新按钮，切换即重新查询
- * - 中部：树形展示，Group → 项目 → MR，双击 / 回车在浏览器打开 MR 页面
+ * - 顶部一行过滤：服务器下拉 (设置页配置列表) + 状态 + 范围下拉 + 全部展开 / 全部收缩 + 刷新；
+ *   服务器 / 状态 / 范围变化即重新查询 (已合并状态仅查前 100 条)
+ * - 中部：树形展示，Group → 项目 → MR 三层，默认全部展开，双击 / 回车在浏览器打开 MR 页面
  * - 底部：当前用户与命中统计；构造后立即自动查询默认服务器
  */
 class GitLabMrListDialog(
     private val project: Project,
     hosts: List<String>,
     defaultHost: String,
-    private val onQuery: (host: String, state: String) -> MrListResult,
+    private val onQuery: (host: String, state: String, scope: String) -> MrListResult,
 ) : DialogWrapper(project, true) {
 
     private val comboHost = JComboBox(hosts.toTypedArray())
@@ -68,6 +71,13 @@ class GitLabMrListDialog(
             StateOption("已合并", "merged"),
             StateOption("已关闭", "closed"),
             StateOption("全部", "all"),
+        )
+    )
+    private val comboScope = JComboBox(
+        arrayOf(
+            StateOption("全部", MrScopes.ALL),
+            StateOption("我创建的", MrScopes.CREATED_BY_ME),
+            StateOption("指给我的", MrScopes.ASSIGNED_TO_ME),
         )
     )
 
@@ -116,6 +126,7 @@ class GitLabMrListDialog(
         init()
         comboHost.addItemListener { if (it.stateChange == ItemEvent.SELECTED) refresh() }
         comboState.addItemListener { if (it.stateChange == ItemEvent.SELECTED) refresh() }
+        comboScope.addItemListener { if (it.stateChange == ItemEvent.SELECTED) refresh() }
         refresh()  // 首次自动加载
     }
 
@@ -123,16 +134,20 @@ class GitLabMrListDialog(
         val panel = JPanel(BorderLayout(0, JBUI.scale(6)))
         panel.border = JBUI.Borders.empty(8)
 
-        // ---- 顶部:服务器 + 状态 + 刷新 ----
+        // ---- 顶部一行:服务器 + 状态 + 范围 + 全部展开/收缩 + 刷新 ----
         val top = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
             add(JLabel("服务器:"))
             add(comboHost)
             add(JLabel("状态:"))
             add(comboState)
+            add(JLabel("范围:"))
+            add(comboScope)
+            add(JButton("全部展开").apply { addActionListener { expandAll(true) } })
+            add(JButton("全部收缩").apply { addActionListener { expandAll(false) } })
             add(JButton("刷新").apply { addActionListener { refresh() } })
         }
 
-        // ---- 中部:MR 树 ----
+        // ---- 中部:MR 树 (Group → 项目 → MR) ----
         treeModel = DefaultTreeModel(DefaultMutableTreeNode("正在加载..."))
         tree = Tree(treeModel).apply {
             isRootVisible = true
@@ -176,15 +191,19 @@ class GitLabMrListDialog(
 
     private fun selectedState(): String = (comboState.selectedItem as? StateOption)?.value ?: "opened"
 
+    private fun selectedScope(): String =
+        (comboScope.selectedItem as? StateOption)?.value ?: MrScopes.ALL
+
     private fun refresh() {
         val host = comboHost.selectedItem as? String ?: return
         val state = selectedState()
+        val scope = selectedScope()
 
         setRootText("正在加载...")
         ProgressManager.getInstance().run(object : Task.Modal(project, "查询 Merge Request...", true) {
             override fun run(indicator: ProgressIndicator) {
                 val result = try {
-                    onQuery(host, state)
+                    onQuery(host, state, scope)
                 } catch (ex: Exception) {
                     MrListResult(null, emptyList(), "查询失败: ${ex.message}", false)
                 }
@@ -197,7 +216,7 @@ class GitLabMrListDialog(
     }
 
     private fun applyResult(host: String, result: MrListResult) {
-        // ---- 错误 / 空结果 ----
+        // ---- 错误 ----
         if (result.error != null) {
             val root = DefaultMutableTreeNode("查询失败: ${result.error}")
             if (result.tokenProblem) {
@@ -216,7 +235,8 @@ class GitLabMrListDialog(
         }
 
         // ---- Group → 项目 → MR 三层树 ----
-        val root = DefaultMutableTreeNode("GitLab: ${host} (${items.size} 个 MR)")
+        val truncatedTip = if (result.truncated) " (已合并仅显示前 100 条)" else ""
+        val root = DefaultMutableTreeNode("GitLab: ${host} (${items.size} 个 MR)$truncatedTip")
         for ((groupName, groupMrs) in items.groupBy { it.groupName() }.toSortedMap()) {
             val groupNode = DefaultMutableTreeNode(GroupInfo(groupName, groupMrs.size))
             for ((path, projMrs) in groupMrs.groupBy { it.projectPath() ?: it.webUrl }.toSortedMap()) {
@@ -241,11 +261,20 @@ class GitLabMrListDialog(
     private fun setRoot(root: DefaultMutableTreeNode) {
         treeModel.setRoot(root)
         treeModel.reload()
-        expandAll()
+        expandAll(true)
     }
 
-    private fun expandAll() {
-        for (row in 0 until tree.rowCount) tree.expandRow(row)
+    /** 展开 / 收起全部节点 (root 始终可见) */
+    private fun expandAll(expand: Boolean) {
+        val root = treeModel.root as? DefaultMutableTreeNode ?: return
+        val path = TreePath(root.path)
+        if (expand) {
+            for (row in 0 until tree.rowCount) tree.expandRow(row)
+            tree.expandPath(path)
+        } else {
+            for (row in 0 until tree.rowCount) tree.collapseRow(row)
+            tree.collapsePath(path)  // 收缩时也把 root 折起，只留一行总览
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -259,7 +288,7 @@ class GitLabMrListDialog(
     }
 
     // ------------------------------------------------------------------ //
-    //  渲染
+    //  展示辅助
     // ------------------------------------------------------------------ //
 
     private fun stateLabel(state: String): String = when (state) {
@@ -283,7 +312,7 @@ class GitLabMrListDialog(
             append("状态: ${stateLabel(mr.state)} · 分支: ${esc(mr.sourceBranch)} → ${esc(mr.targetBranch)}<br>")
             if (mr.authorName.isNotEmpty()) append("作者: ${esc(mr.authorName)} · ")
             append("更新: ${mr.updatedAtText()}<br>")
-            append("范围: ${mr.scopeTags()}<br>")
+            append("范围: ${mr.scopeTags()} · 目录: ${esc(mr.projectPath() ?: "-")}<br>")
             append("链接: ${esc(mr.webUrl)}")
             append("</html>")
         }
