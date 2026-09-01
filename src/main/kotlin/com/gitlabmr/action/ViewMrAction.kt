@@ -34,7 +34,7 @@ private val LOG = logger<ViewMrAction>()
  *
  * 流程:
  * 1. 读取配置的服务器列表，无 Token 时通过通知引导设置页
- * 2. 弹出列表对话框（自动查询上次使用的服务器）
+ * 2. 弹出列表对话框（默认载入上次的查询条件并自动查询）
  * 3. 对话框内按 Group 分组展示，双击 / 回车打开 MR 页面
  */
 class ViewMrAction : AnAction(
@@ -62,7 +62,11 @@ class ViewMrAction : AnAction(
         }
 
         val defaultHost = config.loadLastViewHost().takeIf { it in hosts } ?: hosts.first()
-        val dialog = GitLabMrListDialog(project, hosts, defaultHost) { host, state, scope ->
+        val dialog = GitLabMrListDialog(
+            project, hosts, defaultHost,
+            defaultState = config.loadLastViewState(),
+            defaultScope = config.loadLastViewScope(),
+        ) { host, state, scope ->
             queryMergeRequests(config, host, state, scope)
         }
         dialog.show()
@@ -106,6 +110,8 @@ class ViewMrAction : AnAction(
             }
 
             config.saveLastViewHost(host)
+            config.saveLastViewState(state)
+            config.saveLastViewScope(scope)
             MrListResult(
                 user = user,
                 items = merged.values.sortedByDescending { it.updatedAt },

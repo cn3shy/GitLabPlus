@@ -21,7 +21,6 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
-import java.awt.event.ItemEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
@@ -52,15 +51,17 @@ private data class ProjectInfo(val path: String, val count: Int)
 /**
  * Merge Request 列表对话框 ("查看 Merge Request")
  *
- * - 顶部一行过滤：服务器下拉 (设置页配置列表) + 状态 + 范围下拉 + 全部展开 / 全部收缩 + 刷新；
- *   服务器 / 状态 / 范围变化即重新查询 (已合并状态仅查前 100 条)
+ * - 顶部一行过滤：服务器下拉 (设置页配置列表) + 状态 + 范围下拉 + 全部展开 / 全部收缩 + 查询；
+ *   修改下拉后点 "查询" 生效 (已合并状态仅查前 100 条)
  * - 中部：树形展示，Group → 项目 → MR 三层，默认全部展开，双击 / 回车在浏览器打开 MR 页面
- * - 底部：当前用户与命中统计；构造后立即自动查询默认服务器
+ * - 底部：当前用户与命中统计；构造后按传入的默认条件 (上次查询条件) 立即自动查询
  */
 class GitLabMrListDialog(
     private val project: Project,
     hosts: List<String>,
     defaultHost: String,
+    defaultState: String,
+    defaultScope: String,
     private val onQuery: (host: String, state: String, scope: String) -> MrListResult,
 ) : DialogWrapper(project, true) {
 
@@ -70,12 +71,10 @@ class GitLabMrListDialog(
             StateOption("已打开", "opened"),
             StateOption("已合并", "merged"),
             StateOption("已关闭", "closed"),
-            StateOption("全部", "all"),
         )
     )
     private val comboScope = JComboBox(
         arrayOf(
-            StateOption("全部", MrScopes.ALL),
             StateOption("我创建的", MrScopes.CREATED_BY_ME),
             StateOption("指给我的", MrScopes.ASSIGNED_TO_ME),
         )
@@ -124,17 +123,28 @@ class GitLabMrListDialog(
     init {
         title = "查看 Merge Request"
         init()
-        comboHost.addItemListener { if (it.stateChange == ItemEvent.SELECTED) refresh() }
-        comboState.addItemListener { if (it.stateChange == ItemEvent.SELECTED) refresh() }
-        comboScope.addItemListener { if (it.stateChange == ItemEvent.SELECTED) refresh() }
-        refresh()  // 首次自动加载
+        // 默认载入上次查询条件 (值不在可选项中时保持第一项，兼容旧版本存的 "all")
+        comboHost.selectedItem = defaultHost
+        selectOption(comboState, defaultState)
+        selectOption(comboScope, defaultScope)
+        refresh()  // 按上次条件自动加载
+    }
+
+    /** 按 value 选中下拉项，无匹配时不改动 (保持第一项) */
+    private fun selectOption(combo: JComboBox<StateOption>, value: String) {
+        for (i in 0 until combo.itemCount) {
+            if (combo.getItemAt(i).value == value) {
+                combo.selectedIndex = i
+                return
+            }
+        }
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout(0, JBUI.scale(6)))
         panel.border = JBUI.Borders.empty(8)
 
-        // ---- 顶部一行:服务器 + 状态 + 范围 + 全部展开/收缩 + 刷新 ----
+        // ---- 顶部一行:服务器 + 状态 + 范围 + 全部展开/收缩 + 查询 ----
         val top = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
             add(JLabel("服务器:"))
             add(comboHost)
@@ -144,7 +154,7 @@ class GitLabMrListDialog(
             add(comboScope)
             add(JButton("全部展开").apply { addActionListener { expandAll(true) } })
             add(JButton("全部收缩").apply { addActionListener { expandAll(false) } })
-            add(JButton("刷新").apply { addActionListener { refresh() } })
+            add(JButton("查询").apply { addActionListener { refresh() } })
         }
 
         // ---- 中部:MR 树 (Group → 项目 → MR) ----

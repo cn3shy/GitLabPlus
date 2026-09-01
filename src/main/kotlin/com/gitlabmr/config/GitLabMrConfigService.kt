@@ -37,6 +37,10 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         var knownHosts: MutableSet<String> = mutableSetOf(),
         /** "查看 Merge Request" 上次使用的服务器 (host，可含端口) */
         var lastViewHost: String = "",
+        /** "查看 Merge Request" 上次使用的状态过滤 (opened / merged / closed / all) */
+        var lastViewState: String = "",
+        /** "查看 Merge Request" 上次使用的范围过滤 (all / created_by_me / assigned_to_me) */
+        var lastViewScope: String = "",
     )
 
     private var state: State = State()
@@ -148,13 +152,27 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     fun knownHosts(): Set<String> = state.knownHosts
 
     // ------------------------------------------------------------------ //
-    //  查看 Merge Request (上次选择的服务器)
+    //  查看 Merge Request (上次查询条件：服务器 / 状态 / 范围)
     // ------------------------------------------------------------------ //
 
     fun loadLastViewHost(): String = state.lastViewHost
 
+    fun loadLastViewState(): String = state.lastViewState
+
+    fun loadLastViewScope(): String = state.lastViewScope
+
     fun saveLastViewHost(host: String) {
         state.lastViewHost = host
+        saveStateNow()
+    }
+
+    fun saveLastViewState(state: String) {
+        this.state.lastViewState = state
+        saveStateNow()
+    }
+
+    fun saveLastViewScope(scope: String) {
+        this.state.lastViewScope = scope
         saveStateNow()
     }
 

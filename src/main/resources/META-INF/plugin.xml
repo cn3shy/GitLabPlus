@@ -17,6 +17,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <b>2026.9.2</b> –
+        <ul>
+            <li>查看 Merge Request：新增"查询"按钮 (下拉变更不再自动查询)，打开时默认载入上次查询条件；移除状态/范围下拉的"全部"选项</li>
+            <li>创建 Merge Request：项目目录未注册 Git 根时也能识别仓库 (从选中目录向上查找 .git)</li>
+        </ul>
         <b>2026.9.1</b> – 功能汇总
         <ul>
             <li>创建 Merge Request：自动识别当前项目的 GitLab 远程仓库 (HTTPS / SSH)，按差异 commit 自动生成标题，支持主干分支规则校验、分支 / 审核人记忆与项目成员下拉选择</li>

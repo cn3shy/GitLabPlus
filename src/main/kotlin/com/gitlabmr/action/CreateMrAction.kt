@@ -56,13 +56,19 @@ class CreateMrAction : AnAction(
 
         // ---- 1. 获取 Git 仓库根目录 ----
         // 在哪个 project 窗口/文件上触发，就定位哪个仓库
-        val repository = findGitRepository(project, e)
-        if (repository == null) {
-            Messages.showWarningDialog("当前项目不是 Git 仓库，无法创建 MR。", "GitLab MR")
-            return
-        }
-        val repoName = repository.root.name
-        val repoRoot = File(repository.root.path)
+        val repoRoot: File = findGitRepository(project, e)?.let { File(it.root.path) }
+            ?: findGitRootByWalkingUp(e, project)
+            ?: run {
+                Messages.showWarningDialog(
+                    "未找到 Git 仓库，无法创建 MR。\n\n" +
+                        "可能原因:\n" +
+                        "1. 当前选中的目录 / 项目根目录不在 Git 仓库内\n" +
+                        "2. 多仓库项目未在 Settings → Version Control 中登记 Git 根目录",
+                    "GitLab MR"
+                )
+                return
+            }
+        val repoName = repoRoot.name
 
         // ---- 2. 读取 remote URL ----
         val remoteUrl = getGitRemoteUrl(repoRoot)
@@ -258,6 +264,23 @@ class CreateMrAction : AnAction(
             LOG.warn("获取 Git 仓库失败: ${ex.message}")
             null
         }
+    }
+
+    /**
+     * git4idea 未注册任何仓库时的兜底:
+     * 从选中的文件/目录 (无选中时项目根目录) 开始逐级向上查找 .git，
+     * 找到即认为该目录是仓库根。覆盖 "项目打开在仓库上级目录 / VCS 根未登记" 的场景。
+     */
+    private fun findGitRootByWalkingUp(e: AnActionEvent, project: Project): File? {
+        val start = e.getData(CommonDataKeys.VIRTUAL_FILE)?.let { File(it.path) }
+            ?: project.basePath?.let { File(it) }
+            ?: return null
+        var dir = if (start.isDirectory) start else start.parentFile
+        while (dir != null) {
+            if (File(dir, ".git").exists()) return dir
+            dir = dir.parentFile
+        }
+        return null
     }
 
     /**
