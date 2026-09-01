@@ -1,0 +1,21 @@
+.codegraph/.gitignore
+  s_88f39ee7c186ee::t_c0d138bce49df6 1-5
+.mcp.json
+  s_88f39ee7c186ee::t_9783be32bb63ce 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "fe96569f8cbdcd11a74b08055d14b0a75ec14e2a",
+  "prompts": {},
+  "sessions": {
+    "s_88f39ee7c186ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18fc9c2c-26dc-422a-9b32-07aa98a58150",
+        "model": "unknown"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
