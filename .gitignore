@@ -24,3 +24,6 @@ Thumbs.db
 *.zip
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+
+# Claude Code
+.claude/

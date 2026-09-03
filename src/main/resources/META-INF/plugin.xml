@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.gitlabmr.mrplugin</id>
     <name>GitLabPlus</name>
-    <vendor email="cn3shy@qq.com" url="https://github.com/cn3shy/">cn3shy</vendor>
+    <vendor email="cn3shy@qq.com" url="https://github.com/cn3shy/GitLabPlus">cn3shy</vendor>
 
     <description><![CDATA[
         <h3>GitLabPlus</h3>
@@ -12,11 +12,17 @@
             <li>支持分支规则校验（主干分支只能作为目标分支）</li>
             <li>记住上次使用的分支和审核人</li>
             <li>下拉选择审核人（自动获取项目成员）</li>
-            <li>查看我创建的与指给我的 Merge Request（按 Group 分组展示，可直达页面）</li>
+            <li>在 IDE 侧边栏窗口查看我创建的与指给我的 Merge Request（按 Group 分组展示，可直达页面）</li>
         </ul>
     ]]></description>
 
     <change-notes><![CDATA[
+        <b>2026.9.3</b> –
+        <ul>
+            <li>查看 Merge Request 改为 IDE 侧边栏工具窗口：侧边工具栏常驻按钮（插件图标，未激活自动灰化、激活显示彩色），可停靠 / 拖放，窗口状态自动记忆；原菜单 / 右键入口移除</li>
+            <li>创建 Merge Request 取消 GitLabPlus 子菜单，直接挂在 Git 主菜单 / 右键 Git 子菜单下</li>
+            <li>“全部展开 / 全部收缩”移入树上方工具栏，查询按钮常驻右侧，窄窗口不再被挤出</li>
+        </ul>
         <b>2026.9.2</b> –
         <ul>
             <li>查看 Merge Request：新增"查询"按钮 (下拉变更不再自动查询)，打开时默认载入上次查询条件；移除状态/范围下拉的"全部"选项</li>
@@ -43,11 +49,17 @@
             parentId="tools"
             displayName="GitLab MR"
             instance="com.gitlabmr.config.GitLabMrSettingsConfigurable"/>
+        <toolWindow id="GitLabPlus"
+                    anchor="right"
+                    factoryClass="com.gitlabmr.ui.GitLabMrToolWindowFactory"
+                    icon="/icons/toolWindowGitLabPlus.svg"
+                    shouldBeAvailable="true"
+                    description="查看我创建的与指给我的 GitLab Merge Request"/>
         <notificationGroup id="GitLab MR" displayType="BALLOON"/>
     </extensions>
 
     <actions>
-        <!-- Action 定义一次，通过 add-to-group / reference 挂到不同入口 -->
+        <!-- 创建 Merge Request：顶部工具栏 + Git 主菜单 / 项目视图右键 Git 子菜单 (直接挂,无子菜单) -->
         <action id="GitLabMr.Create"
                 class="com.gitlabmr.action.CreateMrAction"
                 icon="/icons/createMr.svg"
@@ -55,28 +67,10 @@
                 description="为当前项目创建 GitLab Merge Request">
             <!-- 顶部工具栏只保留"创建 Merge Request"一个按钮，不进分组 -->
             <add-to-group group-id="MainToolbarRight" anchor="last"/>
-        </action>
-
-        <action id="GitLabMr.View"
-                class="com.gitlabmr.action.ViewMrAction"
-                icon="/icons/viewMr.svg"
-                text="查看 Merge Request"
-                description="查看我创建的与指给我的 GitLab Merge Request"/>
-
-        <!-- Git 主菜单 / 项目右键 Git 子菜单：两个 Action 收进 "GitLabPlus" 子菜单 (图标 createMr.svg) -->
-        <group id="GitLabPlus.Group"
-               class="com.intellij.openapi.actionSystem.DefaultActionGroup"
-               icon="/icons/createMr.svg"
-               text="GitLabPlus"
-               description="GitLabPlus Merge Request 工具"
-               popup="true">
-            <!-- 主菜单 Git (VCS) 菜单末尾 -->
+            <!-- Git 主菜单 (VCS) 末尾 -->
             <add-to-group group-id="Git.MainMenu" anchor="last"/>
             <!-- 项目视图右键菜单 → Git 子菜单 -->
             <add-to-group group-id="Git.ContextMenu" anchor="last"/>
-
-            <reference ref="GitLabMr.Create"/>
-            <reference ref="GitLabMr.View"/>
-        </group>
+        </action>
     </actions>
 </idea-plugin>

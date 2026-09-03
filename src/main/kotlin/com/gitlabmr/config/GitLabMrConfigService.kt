@@ -55,9 +55,9 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     // ------------------------------------------------------------------ //
 
     private fun credentialAttributes(host: String): CredentialAttributes =
-        // resetPassword = true: 绕过 PasswordSafe 的内存缓存,
+        // isPasswordMemoryOnly = true: 绕过 PasswordSafe 的内存缓存,
         // 保证覆盖 / 删除 / 读取与底层密钥库即时一致 (否则 set(null) 删不掉旧值)
-        CredentialAttributes("GitLabMR-$host", null, null, true)
+        CredentialAttributes("GitLabMR-$host", null, true)
 
     /**
      * 读取指定 host 对应的 Personal Access Token。

@@ -19,7 +19,8 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     intellijPlatform {
-        intellijIdeaCommunity("2023.1")
+        // 2025.3 起 IDEA 统一发行 (旗舰版/社区版合并),统一版用 intellijIdea() 坐标
+        intellijIdea("2025.3")
         // 编译时需要 git4idea API (GitRepository / GitRepositoryManager)
         bundledPlugin("Git4Idea")
     }
@@ -37,8 +38,8 @@ intellijPlatform {
 
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "231"
-            // 不设上限 —— 允许在 2023.1 之后的新版 IDE 上安装运行
+            sinceBuild = "253"
+            // 不设上限 —— 允许在 2025.3 之后的新版 IDE 上安装运行
             untilBuild = provider { null }
         }
     }

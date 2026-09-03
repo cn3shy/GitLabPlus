@@ -1,15 +1,19 @@
 package com.gitlabmr.ui
 
+import com.gitlabmr.api.ApiException
+import com.gitlabmr.api.GitLabServerApi
+import com.gitlabmr.api.TokenInvalidException
+import com.gitlabmr.config.GitLabMrConfigService
 import com.gitlabmr.model.MrItem
 import com.gitlabmr.model.MrListResult
 import com.gitlabmr.model.MrScopes
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleTextAttributes
@@ -18,13 +22,15 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
-import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
+import java.awt.Insets
 import java.awt.event.ActionEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
-import javax.swing.Action
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -36,6 +42,8 @@ import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
+
+private val LOG = logger<GitLabMrToolWindowPanel>()
 
 /** 状态 / 范围下拉选项 (label 显示 / value 传 API) */
 private class StateOption(val label: String, val value: String) {
@@ -49,23 +57,17 @@ private data class GroupInfo(val name: String, val count: Int)
 private data class ProjectInfo(val path: String, val count: Int)
 
 /**
- * Merge Request 列表对话框 ("查看 Merge Request")
+ * "查看 Merge Request" 侧边栏工具窗口面板 (参考 Project 视图，停靠在 IDE 侧边栏)
  *
- * - 顶部一行过滤：服务器下拉 (设置页配置列表) + 状态 + 范围下拉 + 全部展开 / 全部收缩 + 查询；
- *   修改下拉后点 "查询" 生效 (已合并状态仅查前 100 条)
+ * - 顶部一行过滤：服务器下拉 (设置页配置列表) + 状态 + 范围；"查询" 按钮固定在右侧，
+ *   窗口再窄也始终可见 (旧对话框一行 FlowLayout 排不下会把查询按钮挤出去)
+ * - tree 上方工具栏：全部展开 / 全部收缩 (旧版在顶部过滤行，窄窗口同样会被挤掉)
  * - 中部：树形展示，Group → 项目 → MR 三层，默认全部展开，双击 / 回车在浏览器打开 MR 页面
- * - 底部：当前用户与命中统计；构造后按传入的默认条件 (上次查询条件) 立即自动查询
+ * - 底部：当前用户与命中统计；面板打开时按上次查询条件自动查询一次
  */
-class GitLabMrListDialog(
-    private val project: Project,
-    hosts: List<String>,
-    defaultHost: String,
-    defaultState: String,
-    defaultScope: String,
-    private val onQuery: (host: String, state: String, scope: String) -> MrListResult,
-) : DialogWrapper(project, true) {
+class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayout(0, JBUI.scale(6))) {
 
-    private val comboHost = JComboBox(hosts.toTypedArray())
+    private var comboHost: JComboBox<String> = JComboBox()
     private val comboState = JComboBox(
         arrayOf(
             StateOption("已打开", "opened"),
@@ -83,8 +85,9 @@ class GitLabMrListDialog(
     private lateinit var tree: Tree
     private lateinit var treeModel: DefaultTreeModel
     private lateinit var statusLabel: JBLabel
+    private lateinit var btnQuery: JButton
 
-    // 渲染器必须在 init() (createCenterPanel) 之前初始化，声明顺序不能后移
+    // 渲染器必须在数组等初始化之后、UI 构建之前声明，声明顺序不能后移
     private val mrRenderer = object : ColoredTreeCellRenderer() {
         override fun customizeCellRenderer(
             tree: JTree,
@@ -121,43 +124,48 @@ class GitLabMrListDialog(
     }
 
     init {
-        title = "查看 Merge Request"
-        init()
+        border = JBUI.Borders.empty(8)
+        add(buildTop(), BorderLayout.NORTH)
+        add(buildCenter(), BorderLayout.CENTER)
+        add(buildBottom(), BorderLayout.SOUTH)
+
         // 默认载入上次查询条件 (值不在可选项中时保持第一项，兼容旧版本存的 "all")
-        comboHost.selectedItem = defaultHost
-        selectOption(comboState, defaultState)
-        selectOption(comboScope, defaultScope)
-        refresh()  // 按上次条件自动加载
+        val config = GitLabMrConfigService.getInstance()
+        selectOption(comboState, config.loadLastViewState())
+        selectOption(comboScope, config.loadLastViewScope())
+        refresh()  // 首次打开按上次条件自动查询
     }
 
-    /** 按 value 选中下拉项，无匹配时不改动 (保持第一项) */
-    private fun selectOption(combo: JComboBox<StateOption>, value: String) {
-        for (i in 0 until combo.itemCount) {
-            if (combo.getItemAt(i).value == value) {
-                combo.selectedIndex = i
-                return
-            }
+    // ------------------------------------------------------------------ //
+    //  UI 构建
+    // ------------------------------------------------------------------ //
+
+    /**
+     * 顶部过滤行：服务器 + 状态 + 范围 (中间，可压缩) + 查询按钮 (EAST，常驻可见)
+     */
+    private fun buildTop(): JComponent = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
+        val filters = JPanel(GridBagLayout())
+        val gbc = GridBagConstraints().apply {
+            gridy = 0
+            fill = GridBagConstraints.HORIZONTAL
+            insets = Insets(0, JBUI.scale(2), 0, JBUI.scale(2))
         }
+        gbc.gridx = 0; gbc.weightx = 0.0; filters.add(JLabel("服务器:"), gbc)
+        gbc.gridx = 1; gbc.weightx = 1.0; filters.add(comboHost, gbc)
+        gbc.gridx = 2; gbc.weightx = 0.0; filters.add(JLabel("状态:"), gbc)
+        gbc.gridx = 3; gbc.weightx = 0.6; filters.add(comboState, gbc)
+        gbc.gridx = 4; gbc.weightx = 0.0; filters.add(JLabel("范围:"), gbc)
+        gbc.gridx = 5; gbc.weightx = 0.6; filters.add(comboScope, gbc)
+
+        btnQuery = JButton("查询").apply { addActionListener { refresh() } }
+        add(filters, BorderLayout.CENTER)
+        add(btnQuery, BorderLayout.EAST)
     }
 
-    override fun createCenterPanel(): JComponent {
-        val panel = JPanel(BorderLayout(0, JBUI.scale(6)))
-        panel.border = JBUI.Borders.empty(8)
-
-        // ---- 顶部一行:服务器 + 状态 + 范围 + 全部展开/收缩 + 查询 ----
-        val top = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
-            add(JLabel("服务器:"))
-            add(comboHost)
-            add(JLabel("状态:"))
-            add(comboState)
-            add(JLabel("范围:"))
-            add(comboScope)
-            add(JButton("全部展开").apply { addActionListener { expandAll(true) } })
-            add(JButton("全部收缩").apply { addActionListener { expandAll(false) } })
-            add(JButton("查询").apply { addActionListener { refresh() } })
-        }
-
-        // ---- 中部:MR 树 (Group → 项目 → MR) ----
+    /**
+     * 中部：tree 上方工具栏 (全部展开 / 全部收缩 + 操作提示) + MR 树
+     */
+    private fun buildCenter(): JComponent = JPanel(BorderLayout(0, JBUI.scale(2))).apply {
         treeModel = DefaultTreeModel(DefaultMutableTreeNode("正在加载..."))
         tree = Tree(treeModel).apply {
             isRootVisible = true
@@ -174,26 +182,33 @@ class GitLabMrListDialog(
             })
         }
 
-        // ---- 底部:统计 + 操作提示 ----
-        statusLabel = JBLabel(" ")
-        val south = JPanel(BorderLayout()).apply {
-            add(statusLabel, BorderLayout.WEST)
+        val toolbar = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
+            val buttons = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+                add(JButton("全部展开").apply { addActionListener { expandAll(true) } })
+                add(JButton("全部收缩").apply { addActionListener { expandAll(false) } })
+            }
+            add(buttons, BorderLayout.WEST)
             add(JBLabel("双击条目在浏览器打开").apply { foreground = JBColor.GRAY }, BorderLayout.EAST)
         }
-
-        panel.add(top, BorderLayout.NORTH)
-        panel.add(JScrollPane(tree), BorderLayout.CENTER)
-        panel.add(south, BorderLayout.SOUTH)
-        panel.preferredSize = Dimension(JBUI.scale(720), JBUI.scale(520))
-        return panel
+        add(toolbar, BorderLayout.NORTH)
+        add(JScrollPane(tree), BorderLayout.CENTER)
     }
 
-    /** 仅"关闭"一个按钮 (浏览型对话框，无确认语义) */
-    override fun createActions(): Array<out Action> = arrayOf(
-        object : AbstractAction("关闭") {
-            override fun actionPerformed(e: ActionEvent) = doCancelAction()
+    /** 底部：当前用户与命中统计 */
+    private fun buildBottom(): JComponent = JPanel(BorderLayout()).apply {
+        statusLabel = JBLabel(" ")
+        add(statusLabel, BorderLayout.WEST)
+    }
+
+    /** 按 value 选中下拉项，无匹配时不改动 (保持第一项) */
+    private fun selectOption(combo: JComboBox<StateOption>, value: String) {
+        for (i in 0 until combo.itemCount) {
+            if (combo.getItemAt(i).value == value) {
+                combo.selectedIndex = i
+                return
+            }
         }
-    )
+    }
 
     // ------------------------------------------------------------------ //
     //  查询与树构建
@@ -204,25 +219,105 @@ class GitLabMrListDialog(
     private fun selectedScope(): String =
         (comboScope.selectedItem as? StateOption)?.value ?: MrScopes.ALL
 
+    /**
+     * 同步设置页中保存的服务器列表 (设置后无需重启插件)：
+     * 下拉里补充新增的服务器，选中的服务器被移除时回退到记忆服务器 / 第一个
+     */
+    private fun refreshHostOptions() {
+        val config = GitLabMrConfigService.getInstance()
+        val hosts = config.knownHosts()
+            .filter { !config.loadToken(it).isNullOrBlank() }
+            .sorted()
+        if (hosts.isEmpty()) {
+            comboHost.model = DefaultComboBoxModel()
+            return
+        }
+        val current = comboHost.selectedItem as? String
+        comboHost.model = DefaultComboBoxModel(hosts.toTypedArray())
+        if (current != null && current in hosts) {
+            comboHost.selectedItem = current
+        } else {
+            val defaultHost = config.loadLastViewHost().takeIf { it in hosts } ?: hosts.first()
+            comboHost.selectedItem = defaultHost
+        }
+    }
+
     private fun refresh() {
-        val host = comboHost.selectedItem as? String ?: return
+        refreshHostOptions()
+        val host = comboHost.selectedItem as? String
+        if (host == null) {
+            setRootText("没有已配置 Token 的服务器，请到 Settings → Tools → GitLab MR 添加")
+            statusLabel.text = " "
+            return
+        }
         val state = selectedState()
         val scope = selectedScope()
 
+        btnQuery.isEnabled = false
         setRootText("正在加载...")
-        ProgressManager.getInstance().run(object : Task.Modal(project, "查询 Merge Request...", true) {
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "查询 Merge Request...", true) {
             override fun run(indicator: ProgressIndicator) {
                 val result = try {
-                    onQuery(host, state, scope)
+                    queryMergeRequests(host, state, scope)
                 } catch (ex: Exception) {
                     MrListResult(null, emptyList(), "查询失败: ${ex.message}", false)
                 }
                 ApplicationManager.getApplication().invokeLater {
-                    if (isDisposed) return@invokeLater
+                    if (project.isDisposed) return@invokeLater
+                    btnQuery.isEnabled = true
                     applyResult(host, result)
                 }
             }
         })
+    }
+
+    /**
+     * 查询指定服务器上的 MR，合并去重
+     *
+     * @param scope [MrScopes.ALL] 时查询 created_by_me + assigned_to_me 合并，
+     *              否则只查指定范围
+     */
+    private fun queryMergeRequests(host: String, state: String, scope: String): MrListResult {
+        val config = GitLabMrConfigService.getInstance()
+        val token = config.loadToken(host)
+            ?: return MrListResult(null, emptyList(), "尚未配置 \"${host}\" 的 Token", true)
+
+        val api = GitLabServerApi(host, token)
+        return try {
+            val user = api.resolveCurrentUser()
+
+            val created = if (scope != MrScopes.ASSIGNED_TO_ME) {
+                api.fetchMergeRequests(MrScopes.CREATED_BY_ME, state)
+            } else emptyList()
+            val assigned = if (scope != MrScopes.CREATED_BY_ME) {
+                api.fetchMergeRequests(MrScopes.ASSIGNED_TO_ME, state)
+            } else emptyList()
+
+            // 两个 scope 合并去重 (web_url 唯一)，同时打上命中标记
+            val merged = LinkedHashMap<String, MrItem>()
+            for (mr in created) merged[mr.webUrl] = mr.copy(createdByMe = true)
+            for (mr in assigned) {
+                merged[mr.webUrl] = (merged[mr.webUrl] ?: mr).copy(assignedToMe = true)
+            }
+
+            config.saveLastViewHost(host)
+            config.saveLastViewState(state)
+            config.saveLastViewScope(scope)
+            MrListResult(
+                user = user,
+                items = merged.values.sortedByDescending { it.updatedAt },
+                error = null,
+                tokenProblem = false,
+                truncated = state == "merged" && (created.size >= 100 || assigned.size >= 100),
+            )
+        } catch (ex: TokenInvalidException) {
+            MrListResult(null, emptyList(), "Token 无效或已过期，请在设置中更新", true)
+        } catch (ex: ApiException) {
+            MrListResult(null, emptyList(), ex.message ?: "查询失败", false)
+        } catch (ex: Exception) {
+            LOG.warn("查询 MR 列表失败: ${ex.message}")
+            MrListResult(null, emptyList(), "查询失败: ${ex.message}", false)
+        }
     }
 
     private fun applyResult(host: String, result: MrListResult) {
@@ -326,5 +421,10 @@ class GitLabMrListDialog(
             append("链接: ${esc(mr.webUrl)}")
             append("</html>")
         }
+    }
+
+    companion object {
+        /** 与 plugin.xml 中 <toolWindow> 的 id 一致 */
+        const val TOOL_WINDOW_ID = "GitLabPlus"
     }
 }

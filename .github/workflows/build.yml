@@ -51,7 +51,7 @@ jobs:
           <?xml version="1.0" encoding="UTF-8"?>
           <plugins>
               <plugin id="com.gitlabmr.mrplugin" name="GitLabPlus" version="${VERSION}" url="${ZIP_URL}">
-                  <idea-version since-build="231"/>
+                  <idea-version since-build="253"/>
                   <change-notes><![CDATA[GitLabPlus ${VERSION}]]></change-notes>
               </plugin>
           </plugins>
