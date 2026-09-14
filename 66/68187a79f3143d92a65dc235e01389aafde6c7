@@ -1,0 +1,40 @@
+gradle.properties
+  s_74a993e3bd9521::t_a78981c55bb22c 3
+src/main/kotlin/com/gitlabmr/ui/GitLabMrToolWindowPanel.kt
+  s_74a993e3bd9521::t_17281a7509ccf6 11
+  s_74a993e3bd9521::t_c39ba13e36d4fa 465-484
+  s_74a993e3bd9521::t_f6c6b52bb78642 67-70,72-76
+  s_74a993e3bd9521::t_25a207a3ff9555 205-206,209-212
+  s_74a993e3bd9521::t_b0684f31f1475b 389,391-407
+  s_74a993e3bd9521::t_89ec59435ffa49 453-455
+  s_74a993e3bd9521::t_bdd4829260ce4f 278-279
+  s_74a993e3bd9521::t_9148cb7ee0f2a1 18
+  s_74a993e3bd9521::t_bb7387108a7d49 421-429
+README.md
+  s_74a993e3bd9521::t_8c9d65622acc23 28,30-31
+src/main/kotlin/com/gitlabmr/api/GitLabServerApi.kt
+  s_74a993e3bd9521::t_73523a94a8e3a8 6
+  s_74a993e3bd9521::t_9abb3c7a0a15f6 154-156,163
+  s_74a993e3bd9521::t_c8261a56a2eba7 148,151-153,157-162,164-169
+  s_74a993e3bd9521::t_e08f6d4f7bfaf1 145
+src/main/kotlin/com/gitlabmr/model/Models.kt
+  s_74a993e3bd9521::t_965f4fb8929522 85,98
+src/main/resources/META-INF/plugin.xml
+  s_74a993e3bd9521::t_e0a08e64da9723 20-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "6668187a79f3143d92a65dc235e01389aafde6c7",
+  "prompts": {},
+  "sessions": {
+    "s_74a993e3bd9521": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5f83caf6-1d40-4110-b020-7b414967bb08",
+        "model": "deepseek-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
