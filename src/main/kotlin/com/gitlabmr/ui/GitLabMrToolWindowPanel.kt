@@ -8,12 +8,14 @@ import com.gitlabmr.model.MrItem
 import com.gitlabmr.model.MrListResult
 import com.gitlabmr.model.MrScopes
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleTextAttributes
@@ -62,10 +64,16 @@ private data class ProjectInfo(val path: String, val count: Int)
  * - 顶部一行过滤：服务器下拉 (设置页配置列表) + 状态 + 范围；"查询" 按钮固定在右侧，
  *   窗口再窄也始终可见 (旧对话框一行 FlowLayout 排不下会把查询按钮挤出去)
  * - tree 上方工具栏：全部展开 / 全部收缩 (旧版在顶部过滤行，窄窗口同样会被挤掉)
- * - 中部：树形展示，Group → 项目 → MR 三层，默认全部展开，双击 / 回车在浏览器打开 MR 页面
- * - 底部：当前用户与命中统计；面板打开时按上次查询条件自动查询一次
+ * - 中部：树形展示，Group → 项目 → MR 三层，默认全部展开，双击 / 回车在浏览器打开 MR 页面，
+ *   鼠标悬停在 MR 上显示浮动详情 (作者 / 指派给 / 分支 / 目录 / 链接)
+ * - 底部：当前用户与命中统计 + 右下角 "重启窗口" (重建面板，等同关闭后重新打开)；
+ *   面板打开时按上次查询条件自动查询一次
  */
-class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayout(0, JBUI.scale(6))) {
+class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayout(0, JBUI.scale(6))), Disposable {
+
+    /** 面板已被 dispose (窗口重启 / 关闭)：后台查询回来后不再回写已被替换掉的 UI */
+    private var disposed = false
+
 
     private var comboHost: JComboBox<String> = JComboBox()
     private val comboState = JComboBox(
@@ -194,10 +202,14 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
         add(JScrollPane(tree), BorderLayout.CENTER)
     }
 
-    /** 底部：当前用户与命中统计 */
-    private fun buildBottom(): JComponent = JPanel(BorderLayout()).apply {
+    /** 底部：当前用户与命中统计 + 右下角 "重启窗口" */
+    private fun buildBottom(): JComponent = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
         statusLabel = JBLabel(" ")
         add(statusLabel, BorderLayout.WEST)
+        add(JButton("重启窗口").apply {
+            toolTipText = "重建该窗口：重新读取设置并重新查询，等同关闭后重新打开"
+            addActionListener { restart(project) }
+        }, BorderLayout.EAST)
     }
 
     /** 按 value 选中下拉项，无匹配时不改动 (保持第一项) */
@@ -263,7 +275,8 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
                     MrListResult(null, emptyList(), "查询失败: ${ex.message}", false)
                 }
                 ApplicationManager.getApplication().invokeLater {
-                    if (project.isDisposed) return@invokeLater
+                    // 窗口已重启时本面板已被替换掉，结果不能写回旧 UI
+                    if (project.isDisposed || disposed) return@invokeLater
                     btnQuery.isEnabled = true
                     applyResult(host, result)
                 }
@@ -372,13 +385,26 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
     /** 展开 / 收起全部节点 (root 始终可见) */
     private fun expandAll(expand: Boolean) {
         val root = treeModel.root as? DefaultMutableTreeNode ?: return
-        val path = TreePath(root.path)
         if (expand) {
-            for (row in 0 until tree.rowCount) tree.expandRow(row)
-            tree.expandPath(path)
+            expandSubtree(root)
         } else {
-            for (row in 0 until tree.rowCount) tree.collapseRow(row)
-            tree.collapsePath(path)  // 收缩时也把 root 折起，只留一行总览
+            tree.collapsePath(TreePath(root.path))  // 收缩时也把 root 折起，只留一行总览
+        }
+    }
+
+    /**
+     * 递归展开 node 及其全部后代 (叶子节点无需展开)
+     *
+     * 不能按行号 `for (row in 0 until tree.rowCount) tree.expandRow(row)` 展开：
+     * 循环上界在开始时就已固定，而展开一行会让后面的行整体下移、行数增长，
+     * 于是每次点击只能多展开一层，深层节点要点多次才能全部打开。
+     * 这里直接按模型递归，不依赖 tree 当前的行数状态。
+     */
+    private fun expandSubtree(node: DefaultMutableTreeNode) {
+        if (node.isLeaf) return
+        tree.expandPath(TreePath(node.path))
+        for (i in 0 until node.childCount) {
+            (node.getChildAt(i) as? DefaultMutableTreeNode)?.let { expandSubtree(it) }
         }
     }
 
@@ -390,6 +416,15 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
         val node = tree.selectionPath?.lastPathComponent as? DefaultMutableTreeNode ?: return
         val mr = node.userObject as? MrItem ?: return
         BrowserUtil.browse(mr.webUrl)
+    }
+
+    // ------------------------------------------------------------------ //
+    //  生命周期
+    // ------------------------------------------------------------------ //
+
+    /** 面板被替换 (重启窗口) 或窗口销毁时调用；幂等 */
+    override fun dispose() {
+        disposed = true
     }
 
     // ------------------------------------------------------------------ //
@@ -415,8 +450,9 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
         return buildString {
             append("<html><b>!${mr.iid} ${esc(mr.title)}</b><br>")
             append("状态: ${stateLabel(mr.state)} · 分支: ${esc(mr.sourceBranch)} → ${esc(mr.targetBranch)}<br>")
-            if (mr.authorName.isNotEmpty()) append("作者: ${esc(mr.authorName)} · ")
-            append("更新: ${mr.updatedAtText()}<br>")
+            append("作者: ${esc(mr.authorName.ifEmpty { "-" })} · 更新: ${mr.updatedAtText()}<br>")
+            // 指派给：GitLab 支持多人指派；无指派时也显示 "-"，避免与"没取到数据"混淆
+            append("指派给: ${esc(mr.assigneeNames.joinToString(", ").ifEmpty { "-" })}<br>")
             append("范围: ${mr.scopeTags()} · 目录: ${esc(mr.projectPath() ?: "-")}<br>")
             append("链接: ${esc(mr.webUrl)}")
             append("</html>")
@@ -426,5 +462,25 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
     companion object {
         /** 与 plugin.xml 中 <toolWindow> 的 id 一致 */
         const val TOOL_WINDOW_ID = "GitLabPlus"
+
+        /**
+         * 重建工具窗口内容面板 —— 等同手动关掉再打开该窗口：
+         * 重新读取设置页的服务器列表、按记忆的查询条件重新查询、重新展开树。
+         *
+         * 面板自身持有查询条件与树，无法原地复位，只能整体换新实例。
+         * Content.setComponent 只替换组件并触发 "component" 属性变更 (UI 据此刷新)，
+         * 不会 dispose 旧组件，所以旧面板要显式 dispose —— 拦住它尚未返回的查询回调。
+         *
+         * @return 是否重建成功 (工具窗口或 content 尚未创建时为 false)
+         */
+        fun restart(project: Project): Boolean {
+            val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID) ?: return false
+            val content = toolWindow.contentManager.contents.firstOrNull() ?: return false
+            val old = content.component
+            content.component = GitLabMrToolWindowPanel(project)  // init 中已重新读配置并自动查询
+            (old as? Disposable)?.dispose()
+            toolWindow.show()
+            return true
+        }
     }
 }

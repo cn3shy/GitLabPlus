@@ -3,6 +3,7 @@ package com.gitlabmr.api
 import com.gitlabmr.model.CurrentUser
 import com.gitlabmr.model.MrItem
 import com.gitlabmr.util.HttpUtils
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -134,7 +135,6 @@ class GitLabServerApi(
     private fun parseMr(elem: JsonElement): MrItem? {
         val obj = elem.asJsonObject
         val webUrl = obj.get("web_url")?.asString ?: return null
-        val author = obj.getAsJsonObject("author")
         return MrItem(
             iid = obj.get("iid")?.asInt ?: 0,
             title = obj.get("title")?.asString?.trim() ?: "",
@@ -142,10 +142,29 @@ class GitLabServerApi(
             webUrl = webUrl,
             sourceBranch = obj.get("source_branch")?.asString ?: "",
             targetBranch = obj.get("target_branch")?.asString ?: "",
-            authorName = author?.get("name")?.asString?.takeIf { it.isNotBlank() }
-                ?: author?.get("username")?.asString ?: "",
+            authorName = userName(obj.get("author") as? JsonObject) ?: "",
             updatedAt = obj.get("updated_at")?.asString
                 ?: obj.get("created_at")?.asString ?: "",
+            assigneeNames = parseAssigneeNames(obj),
         )
     }
+
+    /**
+     * 指派给的人：v4 返回 assignees 数组 (GitLab 9.5+，可能为空数组)；
+     * 老版本只返回单个 assignee 对象，作兜底。
+     *
+     * 用 `as? JsonArray` 而非 getAsJsonArray：字段缺失或为 JSON null 时后者会抛 ClassCastException。
+     */
+    private fun parseAssigneeNames(obj: JsonObject): List<String> {
+        val fromArray = (obj.get("assignees") as? JsonArray)
+            ?.mapNotNull { userName(it as? JsonObject) }
+            .orEmpty()
+        if (fromArray.isNotEmpty()) return fromArray.distinct()
+        return listOfNotNull(userName(obj.get("assignee") as? JsonObject))
+    }
+
+    /** 用户展示名：优先 name，退回 username；空值返回 null */
+    private fun userName(user: JsonObject?): String? = user
+        ?.get("name")?.asString?.takeIf { it.isNotBlank() }
+        ?: user?.get("username")?.asString?.takeIf { it.isNotBlank() }
 }

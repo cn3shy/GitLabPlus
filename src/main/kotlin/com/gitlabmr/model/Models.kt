@@ -82,6 +82,7 @@ data class CurrentUser(
 /**
  * 服务器级 MR 列表条目 (全局 /merge_requests 接口返回的精简模型)
  *
+ * @param assigneeNames 指派给的人 (GitLab 允许多人指派，无指派时为空)
  * @param createdByMe  是否命中 "我创建的" (scope=created_by_me)
  * @param assignedToMe 是否命中 "指给我的" (scope=assigned_to_me)
  */
@@ -94,6 +95,7 @@ data class MrItem(
     val targetBranch: String,
     val authorName: String,
     val updatedAt: String,
+    val assigneeNames: List<String> = emptyList(),
     val createdByMe: Boolean = false,
     val assignedToMe: Boolean = false,
 ) {
