@@ -1,11 +1,9 @@
 <idea-plugin>
-    <id>com.gitlabmr.mrplugin</id>
+    <id>cn.3shy.gitlabplus</id>
     <name>GitLabPlus</name>
     <vendor email="cn3shy@qq.com" url="https://github.com/cn3shy/GitLabPlus">cn3shy</vendor>
 
-    <description><![CDATA[
-        <h3>GitLabPlus</h3>
-        <p>在 IntelliJ IDEA 中快速创建 / 查看 GitLab Merge Request。</p>
+    <description><![CDATA[GitLabPlus - Create and view GitLab Merge Requests in IntelliJ IDEA. 在 IDE 中快速创建 / 查看 GitLab Merge Request。
         <ul>
             <li>自动识别当前项目的 GitLab 远程仓库</li>
             <li>基于源/目标分支差异 commit 自动生成 MR 标题</li>
@@ -17,29 +15,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <b>2026.9.14</b> –
+        <b>2609(2026 年 9 月)更新汇总</b> –
         <ul>
-            <li>查看 Merge Request：修复"全部展开"需点击多次才能展开全部节点（原按行号展开，展开过程中行数增长导致每次只多展开一层）</li>
-            <li>查看 Merge Request：悬停浮动信息补充"指派给"的人（支持多人指派，无指派显示 -）</li>
-            <li>查看 Merge Request：右下角新增"重启窗口"按钮，重建该窗口（重新读取设置并重新查询），等同关闭后重新打开</li>
-        </ul>
-        <b>2026.9.3</b> –
-        <ul>
-            <li>查看 Merge Request 改为 IDE 侧边栏工具窗口：侧边工具栏常驻按钮（插件图标，未激活自动灰化、激活显示彩色），可停靠 / 拖放，窗口状态自动记忆；原菜单 / 右键入口移除</li>
-            <li>创建 Merge Request 取消 GitLabPlus 子菜单，直接挂在 Git 主菜单 / 右键 Git 子菜单下</li>
-            <li>“全部展开 / 全部收缩”移入树上方工具栏，查询按钮常驻右侧，窄窗口不再被挤出</li>
-        </ul>
-        <b>2026.9.2</b> –
-        <ul>
-            <li>查看 Merge Request：新增"查询"按钮 (下拉变更不再自动查询)，打开时默认载入上次查询条件；移除状态/范围下拉的"全部"选项</li>
-            <li>创建 Merge Request：项目目录未注册 Git 根时也能识别仓库 (从选中目录向上查找 .git)</li>
-        </ul>
-        <b>2026.9.1</b> – 功能汇总
-        <ul>
-            <li>创建 Merge Request：自动识别当前项目的 GitLab 远程仓库 (HTTPS / SSH)，按差异 commit 自动生成标题，支持主干分支规则校验、分支 / 审核人记忆与项目成员下拉选择</li>
-            <li>查看 Merge Request：按设置页配置的服务器查询我创建的 / 指给我的 MR，按目录 (Group) 分组展示，支持状态 (已打开 / 已合并 / 已关闭 / 全部)、范围 (全部 / 我创建的 / 指给我的) 与目录过滤；已合并只查询前 100 条；双击 / 回车在浏览器打开</li>
-            <li>Token 统一在 Settings → Tools → GitLab MR 中管理，本机保存，升级插件 / 重启 IDE 不丢失</li>
-            <li>入口统一收进 Git 主菜单 / 新 UI 顶部工具栏 / 项目右键 Git 子菜单的 "GitLabPlus" 子菜单</li>
+            <li><b>新增 · 定时提醒</b>:定时查询"指给我的 Merge Request",有新指派或有更新时弹通知;默认关闭、间隔可配(Settings → 其他设置 → GitLabPlus → 定时提醒),通知可直接打开 MR(多条时一次性全部打开,最多 10 个),或打开侧边栏列表(自动切到"指给我的")</li>
+            <li><b>设置页重构</b>:设置入口迁至 Settings → <b>Other Settings(其他设置)</b> → <b>GitLabPlus</b>,下设三个子页 —— <b>Access Token</b>(各服务器 Token 管理)、<b>项目记忆</b>(各项目上次的分支与审核人)、<b>定时提醒</b></li>
+            <li><b>创建 Merge Request</b>:自动识别当前项目的 GitLab 远程仓库(HTTPS / SSH,未注册 Git 根的目录也能识别),按差异 commit 自动生成标题,主干分支规则校验,记忆上次分支与审核人;入口直接挂在 Git / 右键 Git 菜单与主工具栏;创建成功后通知直接给出编号 / 标题 / 分支 / 审核人 / 项目,并提供"打开 MR" / "查看列表"按钮(不再显示链接文本,"查看列表"自动切到"我创建的")</li>
+            <li><b>查看 Merge Request</b>:改为 IDE 侧边栏工具窗口,按 Group → 项目 → MR 三层展示;支持状态(已打开 / 已合并 / 已关闭)与范围(我创建的 / 指给我的)过滤、全部展开 / 收缩、悬停详情(作者 / 指派给 / 分支 / 目录 / 链接)、双击直达页面、右下角"重启窗口"重建</li>
+            <li><b>Token 与配置</b>:Token 统一在设置页管理,保存在插件本机配置(升级插件 / 重启 IDE 不丢失,历史密钥库数据自动迁移);插件 ID 变更为 <b>cn.3shy.gitlabplus</b> —— 与旧 ID 在 IDE 中属于两个不同插件,升级需先卸载旧版,Token 与项目记忆不受影响</li>
+            <li><b>修复</b>:查看 MR"全部展开"需多次点击;定时提醒"立即检查"卡在"正在检查"(轮询服务漏注册,并补了异常兜底,失败会显示原因)</li>
         </ul>
     ]]></change-notes>
 
@@ -50,11 +33,31 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService
             serviceImplementation="com.gitlabmr.config.GitLabMrConfigService"/>
+        <!-- 定时提醒:打开项目时启动 APP 级轮询服务 -->
+        <postStartupActivity
+            implementation="com.gitlabmr.notify.MrNotifyStartupActivity"/>
+
+        <!-- 设置树:Settings → Other Settings → GitLabPlus → 各子页 -->
         <applicationConfigurable
             id="com.gitlabmr.settings"
-            parentId="tools"
-            displayName="GitLab MR"
-            instance="com.gitlabmr.config.GitLabMrSettingsConfigurable"/>
+            parentId="other"
+            displayName="GitLabPlus"
+            instance="com.gitlabmr.config.GitLabPlusSettingsConfigurable"/>
+        <applicationConfigurable
+            id="com.gitlabmr.settings.token"
+            parentId="com.gitlabmr.settings"
+            displayName="Access Token"
+            instance="com.gitlabmr.config.AccessTokenConfigurable"/>
+        <applicationConfigurable
+            id="com.gitlabmr.settings.memory"
+            parentId="com.gitlabmr.settings"
+            displayName="项目记忆"
+            instance="com.gitlabmr.config.ProjectMemoryConfigurable"/>
+        <applicationConfigurable
+            id="com.gitlabmr.settings.notify"
+            parentId="com.gitlabmr.settings"
+            displayName="定时提醒"
+            instance="com.gitlabmr.config.NotifyConfigurable"/>
         <toolWindow id="GitLabPlus"
                     anchor="right"
                     factoryClass="com.gitlabmr.ui.GitLabMrToolWindowFactory"

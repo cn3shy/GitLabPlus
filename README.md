@@ -47,12 +47,12 @@ AIGC:
 
 ## 安装
 
-### 方式一：自定义插件仓库（推荐，支持自动更新）
+### 方式一：JetBrains Marketplace（推荐，自动更新）
 
-1. IDEA → Settings → Plugins → ⚙ → **Manage Plugin Repositories** → 添加：
-   `https://raw.githubusercontent.com/cn3shy/GitLabPlus/main/updatePlugins.xml`
-2. Plugins → **Marketplace** 页搜索 `GitLabPlus` 安装
-3. 之后每次发版，IDE 会自动检测并提示更新
+插件主页：https://plugins.jetbrains.com/plugin/34316-gitlabplus
+
+1. 打开插件主页点 **Install to IDE**，或 IDEA → Settings → Plugins → **Marketplace** → 搜索 `GitLabPlus` → 安装
+2. 之后每次发版，IDE 会自动检测并提示更新
 
 ### 方式二：手动安装
 
@@ -62,18 +62,23 @@ AIGC:
 
 ## CI / 自动发布
 
-GitHub Actions（`.github/workflows/build.yml`）：
+GitHub Actions（`.github/workflows/build.yml`），**打 `v*` tag**（如 `v2609.17.1`）时触发，依次：
 
-- **推送到 `main` 或手动触发**：自动构建，插件 zip 上传到 Actions Artifacts（保留 30 天）
-- **打 `v*` tag**（如 `v1.2.4`）：除构建外，还会——
-  - 自动创建 GitHub Release 并附上插件 zip
-  - 重新生成 `updatePlugins.xml` 并提交回仓库（自定义插件仓库索引，指向最新 Release 附件）
+1. 构建插件 zip
+2. `./gradlew publishPlugin` 上传到 [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34316-gitlabplus)（IDE 的"自动更新"由市场提供，不再需要自定义插件仓库索引）
+3. 创建 GitHub Release 并附上插件 zip（方便手动下载安装）
 
-> 版本号统一维护在 `gradle.properties` 的 `pluginVersion`，发版时改它并打对应 tag（CI 会用 tag 号强制覆盖构建版本）。
+> - 版本号统一维护在 `gradle.properties` 的 `pluginVersion`,格式 `年月.日.序号`(如 `2609.17.1` = 26 年 9 月 17 日的第 1 个版本,当天再发第 2 个就是 `2609.17.2`),发版时改它并打同号 tag(CI 会用 tag 号强制覆盖构建版本)。
+> - 需要在 GitHub 仓库配置 Secret **`PUBLISH_TOKEN`**：到 [JetBrains Marketplace](https://plugins.jetbrains.com) → 头像 → **My Tokens** 生成，填到 Settings → Secrets and variables → Actions。
 
 ## 配置
 
-Token 统一在 **Settings → Tools → GitLab MR** 中配置（需在 GitLab → 用户设置 → Access Tokens 中创建，勾选 `api` 权限）。Token 保存在插件本机配置文件（`options/gitlab-mr-plugin.xml`）中，与 IDE 凭证后端无关，升级插件 / 重启 IDE 均不会丢失；历史版本保存在密钥库中的 Token 会自动迁移。
+Token 统一在 **Settings → Other Settings(其他设置)→ GitLabPlus → Access Token** 中配置(需在 GitLab → 用户设置 → Access Tokens 中创建,勾选 `api` 权限)。Token 保存在插件本机配置文件(`options/gitlab-mr-plugin.xml`)中,与 IDE 凭证后端无关,升级插件 / 重启 IDE 均不会丢失;历史版本保存在密钥库中的 Token 会自动迁移。
+
+同一节点下还有两个子页:
+
+- **项目记忆**:各项目上次使用的源 / 目标分支与审核人,可编辑或清除
+- **定时提醒**:定时查询"指给我的 Merge Request",有新指派或有更新时弹通知(默认关闭,间隔可配置;查询的是"查看 MR"窗口上次使用的那台服务器)
 
 ## 技术栈
 

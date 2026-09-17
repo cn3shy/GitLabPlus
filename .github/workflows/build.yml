@@ -6,7 +6,7 @@ on:
     tags: [ 'v*' ]
 
 permissions:
-  contents: write   # 创建 GitHub Release / 回写 updatePlugins.xml
+  contents: write   # 创建 GitHub Release
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,34 +30,21 @@ jobs:
         with:
           validate-wrappers: true
 
-      # 首次构建会下载 IntelliJ IDEA Community 2023.1 (约 1GB),之后由 Gradle 缓存加速
+      # 首次构建会下载 IntelliJ IDEA 2025.3 (约 1GB),之后由 Gradle 缓存加速
       # 用 tag 号强制覆盖版本,保证 Release 附件 / Marketplace 版本与 tag 一致
       - name: Build plugin
         run: ./gradlew buildPlugin "-PpluginVersion=${GITHUB_REF_NAME#v}"
 
+      # 上传到 JetBrains Marketplace(IDE 的"自动更新"来自市场,不再需要自定义插件仓库索引)
+      # 需在仓库 Secrets 中配置 PUBLISH_TOKEN:Marketplace → 头像 → My Tokens
+      - name: Publish to JetBrains Marketplace
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: ./gradlew publishPlugin "-PpluginVersion=${GITHUB_REF_NAME#v}"
+
       # 插件 zip 挂到 Release,用户无需认证即可下载安装
+      # 放在发布之后:Marketplace 上传失败就不会留下 Release,便于修复后重跑
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "$GITHUB_REF_NAME" --generate-notes build/distributions/*.zip
-
-      # 更新自定义插件仓库索引,供 IDE "Manage Plugin Repositories" 检查更新
-      # 仓库 URL: https://raw.githubusercontent.com/cn3shy/GitLabPlus/main/updatePlugins.xml
-      - name: Update plugin repository index
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ZIP_URL="https://github.com/cn3shy/GitLabPlus/releases/download/${GITHUB_REF_NAME}/GitLabPlus-${VERSION}.zip"
-          cat > updatePlugins.xml <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <plugins>
-              <plugin id="com.gitlabmr.mrplugin" name="GitLabPlus" version="${VERSION}" url="${ZIP_URL}">
-                  <idea-version since-build="253"/>
-                  <change-notes><![CDATA[GitLabPlus ${VERSION}]]></change-notes>
-              </plugin>
-          </plugins>
-          EOF
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add updatePlugins.xml
-          git diff --cached --quiet || git commit -m "ci: updatePlugins.xml -> v${VERSION}"
-          git push origin HEAD:main

@@ -36,6 +36,11 @@ kotlin {
 intellijPlatform {
     buildSearchableOptions = false
 
+    // 发布到 JetBrains Marketplace:token 由 CI 通过环境变量 PUBLISH_TOKEN 注入
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+    }
+
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "253"

@@ -41,6 +41,12 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         var lastViewState: String = "",
         /** "查看 Merge Request" 上次使用的范围过滤 (all / created_by_me / assigned_to_me) */
         var lastViewScope: String = "",
+        /** 定时提醒:是否开启 (默认关闭) */
+        var notifyEnabled: Boolean = false,
+        /** 定时提醒:检查间隔 (分钟) */
+        var notifyIntervalMinutes: Int = DEFAULT_NOTIFY_INTERVAL_MINUTES,
+        /** 已提醒过的 MR:key = web_url,value = 上次提醒时的 updated_at (值变化视为"有更新") */
+        var notifiedMrs: MutableMap<String, String> = mutableMapOf(),
     )
 
     private var state: State = State()
@@ -206,6 +212,50 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     }
 
     // ------------------------------------------------------------------ //
+    //  定时提醒 (指给我的 MR 轮询)
+    // ------------------------------------------------------------------ //
+
+    fun isNotifyEnabled(): Boolean = state.notifyEnabled
+
+    fun setNotifyEnabled(enabled: Boolean) {
+        state.notifyEnabled = enabled
+        saveStateNow()
+    }
+
+    fun notifyIntervalMinutes(): Int = state.notifyIntervalMinutes.coerceIn(
+        MIN_NOTIFY_INTERVAL_MINUTES,
+        MAX_NOTIFY_INTERVAL_MINUTES,
+    )
+
+    fun setNotifyIntervalMinutes(minutes: Int) {
+        state.notifyIntervalMinutes = minutes.coerceIn(
+            MIN_NOTIFY_INTERVAL_MINUTES,
+            MAX_NOTIFY_INTERVAL_MINUTES,
+        )
+        saveStateNow()
+    }
+
+    /** 该 MR 是否需要提醒:没提醒过,或上次提醒时的 updated_at 与现在不同 (有新提交/评论/状态变化) */
+    fun shouldNotifyMr(webUrl: String, updatedAt: String): Boolean = state.notifiedMrs[webUrl] != updatedAt
+
+    /** 记录某 MR 已提醒 (updated_at 一起存,用于判断后续是否有更新) */
+    fun markMrNotified(webUrl: String, updatedAt: String) {
+        state.notifiedMrs[webUrl] = updatedAt
+        trimNotifiedMrs()
+        saveStateNow()
+    }
+
+    /** 提醒记录上限保护:超出后按 updated_at 淘汰最旧的一批,避免无限增长 */
+    private fun trimNotifiedMrs() {
+        val overflow = state.notifiedMrs.size - MAX_NOTIFIED_MR_ENTRIES
+        if (overflow <= 0) return
+        state.notifiedMrs.entries
+            .sortedBy { it.value }
+            .take(overflow)
+            .forEach { state.notifiedMrs.remove(it.key) }
+    }
+
+    // ------------------------------------------------------------------ //
     //  内部
     // ------------------------------------------------------------------ //
 
@@ -249,6 +299,14 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     }
 
     companion object {
+        /** 定时提醒默认间隔 (分钟) */
+        const val DEFAULT_NOTIFY_INTERVAL_MINUTES: Int = 10
+        const val MIN_NOTIFY_INTERVAL_MINUTES: Int = 1
+        const val MAX_NOTIFY_INTERVAL_MINUTES: Int = 24 * 60
+
+        /** 已提醒 MR 记录的条数上限 */
+        const val MAX_NOTIFIED_MR_ENTRIES: Int = 500
+
         fun getInstance(): GitLabMrConfigService =
             ApplicationManager.getApplication().getService(GitLabMrConfigService::class.java)
     }

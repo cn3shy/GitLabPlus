@@ -232,6 +232,16 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
         (comboScope.selectedItem as? StateOption)?.value ?: MrScopes.ALL
 
     /**
+     * 外部入口(通知上的"查看列表"):切到指定范围并立即查询一次
+     *
+     * @param scope [MrScopes.CREATED_BY_ME] / [MrScopes.ASSIGNED_TO_ME]
+     */
+    fun queryWithScope(scope: String) {
+        selectOption(comboScope, scope)
+        refresh()
+    }
+
+    /**
      * 同步设置页中保存的服务器列表 (设置后无需重启插件)：
      * 下拉里补充新增的服务器，选中的服务器被移除时回退到记忆服务器 / 第一个
      */
@@ -258,7 +268,7 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
         refreshHostOptions()
         val host = comboHost.selectedItem as? String
         if (host == null) {
-            setRootText("没有已配置 Token 的服务器，请到 Settings → Tools → GitLab MR 添加")
+            setRootText("没有已配置 Token 的服务器，请到 Settings → 其他设置 → GitLabPlus → Access Token 添加")
             statusLabel.text = " "
             return
         }
@@ -338,7 +348,7 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
         if (result.error != null) {
             val root = DefaultMutableTreeNode("查询失败: ${result.error}")
             if (result.tokenProblem) {
-                root.add(DefaultMutableTreeNode("请到 Settings → Tools → GitLab MR 检查 \"${host}\" 的 Token"))
+                root.add(DefaultMutableTreeNode("请到 Settings → 其他设置 → GitLabPlus → Access Token 检查 \"${host}\" 的 Token"))
             }
             setRoot(root)
             statusLabel.text = " "
@@ -473,6 +483,22 @@ class GitLabMrToolWindowPanel(private val project: Project) : JPanel(BorderLayou
          *
          * @return 是否重建成功 (工具窗口或 content 尚未创建时为 false)
          */
+        /**
+         * 打开工具窗口并按指定范围查询 —— 通知上的"查看列表"入口:
+         * 创建成功 → 我创建的;指给我提醒 → 指给我的。
+         *
+         * 范围同时写进配置:窗口是首次打开时,面板 init 里的自动查询也按同一范围走
+         * (面板已存在时则由下面的 queryWithScope 直接切范围并重查)。
+         */
+        fun showWithScope(project: Project, scope: String) {
+            GitLabMrConfigService.getInstance().saveLastViewScope(scope)
+            val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID) ?: return
+            toolWindow.show()
+            val panel = toolWindow.contentManager.contents
+                .firstNotNullOfOrNull { it.component as? GitLabMrToolWindowPanel }
+            panel?.queryWithScope(scope)
+        }
+
         fun restart(project: Project): Boolean {
             val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID) ?: return false
             val content = toolWindow.contentManager.contents.firstOrNull() ?: return false

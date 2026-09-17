@@ -3,9 +3,10 @@ package com.gitlabmr.action
 import com.gitlabmr.api.ApiException
 import com.gitlabmr.api.GitLabApi
 import com.gitlabmr.api.TokenInvalidException
+import com.gitlabmr.config.AccessTokenConfigurable
 import com.gitlabmr.config.GitLabMrConfigService
-import com.gitlabmr.config.GitLabMrSettingsConfigurable
 import com.gitlabmr.model.MrCreateParams
+import com.gitlabmr.notify.MrNotifications
 import com.gitlabmr.ui.GitLabMrDialog
 import com.gitlabmr.util.GitLabUtils
 import com.intellij.notification.Notification
@@ -93,7 +94,7 @@ class CreateMrAction : AnAction(
         val defaultTarget = lastBranches.target.ifEmpty { "develop" }
 
         // ---- 3+4. Token 读取 + Project 解析 + 分支/成员获取 ----
-        // Token 统一在 Settings → Tools → GitLab MR 中配置，运行时不再弹输入框
+        // Token 统一在 Settings → 其他设置 → GitLabPlus → Access Token 中配置，运行时不再弹输入框
         var api: GitLabApi? = null
         var branches: List<String> = emptyList()
         var members: List<com.gitlabmr.model.Member> = emptyList()
@@ -148,7 +149,7 @@ class CreateMrAction : AnAction(
                 notification.addAction(object : AnAction("打开设置...") {
                     override fun actionPerformed(e: AnActionEvent) {
                         ShowSettingsUtil.getInstance()
-                            .showSettingsDialog(project, GitLabMrSettingsConfigurable::class.java)
+                            .showSettingsDialog(project, AccessTokenConfigurable::class.java)
                     }
                 })
                 Notifications.Bus.notify(notification, project)
@@ -207,17 +208,9 @@ class CreateMrAction : AnAction(
                 val result = apiRef.createMr(params)
                 ApplicationManager.getApplication().invokeLater {
                     if (result.success) {
-                        val url = result.webUrl ?: ""
-                        // Notification content 按 HTML 解析：换行用 <br>，链接必须用 <a href> 才可点击
-                        val message = if (url.isNotEmpty()) {
-                            "${params.sourceBranch} → ${params.targetBranch} 创建成功<br><a href=\"$url\">$url</a>"
-                        } else {
-                            "${params.sourceBranch} → ${params.targetBranch} 创建成功"
-                        }
-                        Notifications.Bus.notify(
-                            Notification("GitLab MR", "GitLab MR", message, NotificationType.INFORMATION),
-                            project,
-                        )
+                        // 创建成功提示:正文只列关键信息 (编号 / 标题 / 分支 / 审核人 / 项目),
+                        // 不显示链接文本,打开 MR 用通知上的按钮
+                        MrNotifications.notifyMrCreated(project, projectKey, params, result.webUrl)
                         // 保存记忆
                         config.saveLastBranches(projectKey, params.sourceBranch, params.targetBranch)
                         if (params.reviewerUsernames.isNotEmpty()) {
