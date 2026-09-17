@@ -1,0 +1,21 @@
+LICENSE
+  s_9dc875075eb271::t_422c44d940715f 1-21
+README.md
+  s_9dc875075eb271::t_54d9feee87a8c3 90-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "87b703fa138cb3229aedc5f661c7debdbf389d70",
+  "prompts": {},
+  "sessions": {
+    "s_9dc875075eb271": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973fca8f-9375-4a53-86cb-db7755214722",
+        "model": "deepseek-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
