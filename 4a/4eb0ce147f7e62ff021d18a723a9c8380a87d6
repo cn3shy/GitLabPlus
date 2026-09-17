@@ -1,0 +1,16 @@
+LICENSE
+  h_a5db7e66e00d7a 3
+README.md
+  h_a5db7e66e00d7a 41,54-55,57-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "4a4eb0ce147f7e62ff021d18a723a9c8380a87d6",
+  "prompts": {},
+  "humans": {
+    "h_a5db7e66e00d7a": {
+      "author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
