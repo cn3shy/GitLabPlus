@@ -1,14 +1,3 @@
----
-AIGC:
-  ContentProducer: '001191110102MAD55U9H0F10002'
-  ContentPropagator: '001191110102MAD55U9H0F10002'
-  Label: '1'
-  ProduceID: 'ec7b3632-104e-4a70-9ba8-22bd94cf6b10'
-  PropagateID: 'ec7b3632-104e-4a70-9ba8-22bd94cf6b10'
-  ReservedCode1: '9f3581b3-e97f-40b0-ad44-812212b4cc75'
-  ReservedCode2: '9f3581b3-e97f-40b0-ad44-812212b4cc75'
----
-
 # GitLabPlus (IntelliJ IDEA 插件)
 
 [![Build](https://github.com/cn3shy/GitLabPlus/actions/workflows/build.yml/badge.svg)](https://github.com/cn3shy/GitLabPlus/actions/workflows/build.yml)
@@ -49,7 +38,7 @@ AIGC:
 
 ### 方式一：JetBrains Marketplace（推荐，自动更新）
 
-插件主页：https://plugins.jetbrains.com/plugin/34316-gitlabplus
+插件主页：[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34316-gitlabplus) https://plugins.jetbrains.com/plugin/34316-gitlabplus  
 
 1. 打开插件主页点 **Install to IDE**，或 IDEA → Settings → Plugins → **Marketplace** → 搜索 `GitLabPlus` → 安装
 2. 之后每次发版，IDE 会自动检测并提示更新
@@ -60,25 +49,15 @@ AIGC:
 2. IDEA → Settings → Plugins → ⚙ → Install Plugin from Disk → 选择 zip 文件
 3. 重启 IDEA
 
-## CI / 自动发布
-
-GitHub Actions（`.github/workflows/build.yml`），**打 `v*` tag**（如 `v2609.17.1`）时触发，依次：
-
-1. 构建插件 zip
-2. `./gradlew publishPlugin` 上传到 [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34316-gitlabplus)（IDE 的"自动更新"由市场提供，不再需要自定义插件仓库索引）
-3. 创建 GitHub Release 并附上插件 zip（方便手动下载安装）
-
-> - 版本号统一维护在 `gradle.properties` 的 `pluginVersion`,格式 `年月.日.序号`(如 `2609.17.1` = 26 年 9 月 17 日的第 1 个版本,当天再发第 2 个就是 `2609.17.2`),发版时改它并打同号 tag(CI 会用 tag 号强制覆盖构建版本)。
-> - 需要在 GitHub 仓库配置 Secret **`PUBLISH_TOKEN`**：到 [JetBrains Marketplace](https://plugins.jetbrains.com) → 头像 → **My Tokens** 生成，填到 Settings → Secrets and variables → Actions。
-
 ## 配置
 
-Token 统一在 **Settings → Other Settings(其他设置)→ GitLabPlus → Access Token** 中配置(需在 GitLab → 用户设置 → Access Tokens 中创建,勾选 `api` 权限)。Token 保存在插件本机配置文件(`options/gitlab-mr-plugin.xml`)中,与 IDE 凭证后端无关,升级插件 / 重启 IDE 均不会丢失;历史版本保存在密钥库中的 Token 会自动迁移。
+### Access Token
+Token 统一在 **Settings → Other Settings(其他设置)→ GitLabPlus → Access Token** 中配置(需在 GitLab → 用户设置 → Access Tokens 中创建,勾选 `api` 权限)。
 
-同一节点下还有两个子页:
-
-- **项目记忆**:各项目上次使用的源 / 目标分支与审核人,可编辑或清除
-- **定时提醒**:定时查询"指给我的 Merge Request",有新指派或有更新时弹通知(默认关闭,间隔可配置;查询的是"查看 MR"窗口上次使用的那台服务器)
+### 项目记忆 
+各项目上次使用的源 / 目标分支与审核人,可编辑或清除
+### 定时提醒
+定时查询"指给我的 Merge Request",有新指派或有更新时弹通知(默认关闭,间隔可配置;查询的是"查看 MR"窗口上次使用的那台服务器)
 
 ## 技术栈
 
@@ -86,5 +65,3 @@ Token 统一在 **Settings → Other Settings(其他设置)→ GitLabPlus → Ac
 - IntelliJ Platform SDK 2025.3+
 - Gson (JSON 解析)
 - Java HttpClient (网络请求)
-
-> AI生成
