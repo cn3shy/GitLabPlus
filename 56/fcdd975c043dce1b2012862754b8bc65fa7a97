@@ -1,0 +1,86 @@
+README.md
+  s_9dc875075eb271::t_37e6048ae5283b 67,69,72
+  s_9dc875075eb271::t_36cd89591874c7 65
+  s_9dc875075eb271::t_7d76ef4dd33cc4 76-81
+  s_9dc875075eb271::t_c4b606ba3cbe6e 71
+  s_9dc875075eb271::t_f5b25e3cbcaf1c 68
+  s_9dc875075eb271::t_cfbc40923d52c1 50,55
+  s_9dc875075eb271::t_885df3fd3bdd2b 52-54
+gradle.properties
+  s_9dc875075eb271::t_ffb672f4e7894a 2
+  s_9dc875075eb271::t_cd0530d4804f25 3
+src/main/resources/META-INF/plugin.xml
+  s_9dc875075eb271::t_f1286e0e06cd19 6
+  s_9dc875075eb271::t_ffb672f4e7894a 18,21,23-25
+  s_9dc875075eb271::t_51b630a8b1082e 2
+  s_9dc875075eb271::t_6067c5bb27d3f8 36-40,43-60
+  s_9dc875075eb271::t_cd0530d4804f25 20,22
+src/main/kotlin/com/gitlabmr/action/CreateMrAction.kt
+  s_9dc875075eb271::t_ac06f283a414f3 97
+  s_9dc875075eb271::t_926d1d64fe2804 9
+  s_9dc875075eb271::t_fb7f5241468707 152
+  s_9dc875075eb271::t_e520061a37e2aa 211-213
+  s_9dc875075eb271::t_ed93c486bdad05 6
+build.gradle.kts
+  s_9dc875075eb271::t_d58133d64389ae 39-43
+src/main/kotlin/com/gitlabmr/config/GitLabPlusSettingsConfigurable.kt
+  s_9dc875075eb271::t_ae8bfd1a882792 1-39
+src/main/kotlin/com/gitlabmr/config/GitLabMrConfigService.kt
+  s_9dc875075eb271::t_022015833d7552 215-257
+  s_9dc875075eb271::t_bbd32defaeba9f 44-49,214
+  s_9dc875075eb271::t_b10a2d9c0c8824 302-309
+src/main/kotlin/com/gitlabmr/notify/MrNotifyService.kt
+  s_9dc875075eb271::t_8591ad1eb03974 42
+  s_9dc875075eb271::t_274d0d2bb34fd0 10
+  s_9dc875075eb271::t_6c52efb449f679 133
+  s_9dc875075eb271::t_e71d5e1f9700ed 1-9,12-41,43-52,54-56,58-59,61-132,134-135
+  s_9dc875075eb271::t_9d019e7a094b24 11
+  s_9dc875075eb271::t_9aabcd30a5f7ef 53,57,60
+src/main/kotlin/com/gitlabmr/config/AccessTokenConfigurable.kt
+  s_9dc875075eb271::t_b1676f604237c1 1-191
+src/main/kotlin/com/gitlabmr/ui/GitLabMrToolWindowPanel.kt
+  s_9dc875075eb271::t_efca1f223678b6 486-501
+  s_9dc875075eb271::t_bcb9fbfa3611ca 235-243
+  s_9dc875075eb271::t_6745c38bd06301 234,271
+  s_9dc875075eb271::t_5e666b8d6231e9 351
+src/main/kotlin/com/gitlabmr/notify/MrNotifyStartupActivity.kt
+  s_9dc875075eb271::t_a10e63d7c14a23 1-16
+.github/workflows/build.yml
+  s_9dc875075eb271::t_1851423ac82613 38-44,46
+  s_9dc875075eb271::t_173508aac3ca7b 9
+  s_9dc875075eb271::t_76ddaf86831d13 33
+src/main/kotlin/com/gitlabmr/notify/MrNotifications.kt
+  s_9dc875075eb271::t_d9c47e1d345e04 105-107,109-114,116-117,131
+  s_9dc875075eb271::t_96709d24f76157 108,115,118-121,123
+  s_9dc875075eb271::t_b8b2174ef70d29 47
+  s_9dc875075eb271::t_ab5656bd6b7274 5
+  s_9dc875075eb271::t_414c2fa0547f8f 3,18,20-22,35-37,40,45-46,48-60,62-96,98-104,122,124-127,136-138,146-148
+  s_9dc875075eb271::t_2fefe23df8dd6c 32-34
+  s_9dc875075eb271::t_5e02d296ae9893 61
+  s_9dc875075eb271::t_6b7435e2a1605f 139-143
+  s_9dc875075eb271::t_994b336f3a90ab 1-2,4,6-17,19,23-31,38-39,41-44,97,128-130,132-135,144-145,149-151
+src/main/kotlin/com/gitlabmr/config/ProjectMemoryConfigurable.kt
+  s_9dc875075eb271::t_c12782e162cc6b 1-171
+src/main/kotlin/com/gitlabmr/config/NotifyConfigurable.kt
+  s_9dc875075eb271::t_65233006c36b65 118-124,126,137-143
+  s_9dc875075eb271::t_45763c7241aa76 6
+  s_9dc875075eb271::t_2d9a48d29f8c92 1-5,7-117,125,127-130,144-150,154-157
+  s_9dc875075eb271::t_2a132f9a0f2ef6 131-136
+  s_9dc875075eb271::t_74423fcd7476a6 151-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "56fcdd975c043dce1b2012862754b8bc65fa7a97",
+  "prompts": {},
+  "sessions": {
+    "s_9dc875075eb271": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973fca8f-9375-4a53-86cb-db7755214722",
+        "model": "deepseek-flash"
+      },
+      "human_author": "SS <cn3shy@qq.com>"
+    }
+  }
+}
