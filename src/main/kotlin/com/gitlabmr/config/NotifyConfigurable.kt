@@ -1,6 +1,7 @@
 package com.gitlabmr.config
 
 import com.gitlabmr.notify.MrNotifyService
+import com.gitlabmr.notify.NotifyChannel
 import com.gitlabmr.notify.NotifyCheckResult
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -8,6 +9,7 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -21,7 +23,7 @@ import javax.swing.SpinnerNumberModel
 /**
  * 设置子页:Settings → Other Settings → GitLabPlus → 定时提醒
  *
- * 开关 (默认关闭) + 检查间隔 + 当前轮询的服务器,并提供"立即检查"手动跑一次。
+ * 开关 (默认关闭) + 检查间隔 + 当前轮询的服务器 + 通知方式 (可多选),并提供"立即检查"手动跑一次。
  * 所有操作即时生效 (改间隔会重新调度轮询)。
  */
 class NotifyConfigurable : Configurable {
@@ -30,6 +32,9 @@ class NotifyConfigurable : Configurable {
 
     /** reset() 载入配置期间屏蔽控件事件,避免把"载入"当成"用户修改" */
     private var loading = false
+
+    /** 控件监听器只挂一次 (见 [attachListeners]) */
+    private var listenersAttached = false
 
     private val enableBox = JBCheckBox("启用定时提醒(定时查询\"指给我的 Merge Request\"并弹通知)")
 
@@ -46,24 +51,22 @@ class NotifyConfigurable : Configurable {
     private val statusLabel = JBLabel(" ")
     private val checkButton = JButton("立即检查")
 
+    /** 通知方式 (可多选):每种一个勾选框,文案自带说明,不用再点开看 tooltip */
+    private val channelBoxes: Map<NotifyChannel, JBCheckBox> = NotifyChannel.entries.associateWith { channel ->
+        JBCheckBox("${channel.displayName} — ${channel.hint}")
+    }
+
+    private val channelsPanel = JPanel(VerticalLayout(2)).apply {
+        isOpaque = false
+        // 缩进,和上面的勾选框对齐
+        border = JBUI.Borders.emptyLeft(JBUI.scale(20))
+        channelBoxes.values.forEach { add(it) }
+    }
+
     override fun getDisplayName(): String = "定时提醒"
 
     override fun createComponent(): JComponent {
-        enableBox.addActionListener {
-            if (loading) return@addActionListener
-            service.setNotifyEnabled(enableBox.isSelected)
-            intervalSpinner.isEnabled = enableBox.isSelected
-            statusLabel.text = " "
-        }
-        intervalSpinner.addChangeListener {
-            if (loading) return@addChangeListener
-            service.setNotifyIntervalMinutes(
-                (intervalSpinner.value as? Int) ?: GitLabMrConfigService.DEFAULT_NOTIFY_INTERVAL_MINUTES
-            )
-            // 间隔在调度时就固定了,改完要按新间隔重新调度
-            MrNotifyService.getInstance().restart()
-        }
-        checkButton.addActionListener { checkNow() }
+        attachListeners()
 
         val form = FormBuilder.createFormBuilder()
             .addComponent(
@@ -77,6 +80,14 @@ class NotifyConfigurable : Configurable {
             .addComponent(enableBox)
             .addLabeledComponent(JBLabel("检查间隔 (分钟):"), intervalSpinner)
             .addComponent(hostLabel)
+            .addSeparator()
+            .addComponent(
+                JBLabel(
+                    "<html><b>通知方式</b> (可多选,<b>仅作用于定时提醒</b>):创建 MR 成功的通知固定用 notice 气泡;<br>" +
+                        "全部不勾则定时提醒不再有任何通知。</html>"
+                )
+            )
+            .addComponent(channelsPanel)
             .addSeparator()
             .addComponent(checkButton)
             .addComponent(statusLabel)
@@ -97,6 +108,40 @@ class NotifyConfigurable : Configurable {
     //  内部
     // ------------------------------------------------------------------ //
 
+    /**
+     * 挂控件监听器 (只挂一次)
+     *
+     * 控件是 Configurable 的实例字段,而设置页每次打开都会调 createComponent()。
+     * 直接在里面 addListener 的话,开关一次设置页就多叠一层:改一个勾选框会触发
+     * N 次配置落盘,改一次检查间隔会 restart() N 次轮询(每次都把首检推迟 30 秒)。
+     */
+    private fun attachListeners() {
+        if (listenersAttached) return
+        listenersAttached = true
+
+        enableBox.addActionListener {
+            if (loading) return@addActionListener
+            service.setNotifyEnabled(enableBox.isSelected)
+            intervalSpinner.isEnabled = enableBox.isSelected
+            statusLabel.text = " "
+        }
+        intervalSpinner.addChangeListener {
+            if (loading) return@addChangeListener
+            service.setNotifyIntervalMinutes(
+                (intervalSpinner.value as? Int) ?: GitLabMrConfigService.DEFAULT_NOTIFY_INTERVAL_MINUTES
+            )
+            // 间隔在调度时就固定了,改完要按新间隔重新调度
+            MrNotifyService.getInstance().restart()
+        }
+        checkButton.addActionListener { checkNow() }
+        channelBoxes.forEach { (channel, box) ->
+            box.addActionListener {
+                if (loading) return@addActionListener
+                service.setChannelEnabled(channel, box.isSelected)
+            }
+        }
+    }
+
     private fun loadFromConfig() {
         loading = true
         try {
@@ -109,6 +154,7 @@ class NotifyConfigurable : Configurable {
             } else {
                 "轮询服务器:$host"
             }
+            channelBoxes.forEach { (channel, box) -> box.isSelected = service.isChannelEnabled(channel) }
             statusLabel.text = " "
         } finally {
             loading = false

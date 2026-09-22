@@ -109,8 +109,12 @@ class MrNotifyService : Disposable {
             val mrs = api.fetchMergeRequests(MrScopes.ASSIGNED_TO_ME, "opened")
             val fresh = mrs.filter { config.shouldNotifyMr(it.webUrl, it.updatedAt) }
             if (fresh.isNotEmpty()) {
-                if (notify) MrNotifications.notifyAssignedMrs(host, fresh)
-                for (mr in fresh) config.markMrNotified(mr.webUrl, mr.updatedAt)
+                // 一条通知通道都没勾时提醒并没有发出去,这时不能记为"已提醒" ——
+                // 否则用户之后打开通道,这几条 MR 就永远不会再被提醒了
+                val delivered = !notify || MrNotifications.notifyAssignedMrs(host, fresh)
+                if (delivered) {
+                    for (mr in fresh) config.markMrNotified(mr.webUrl, mr.updatedAt)
+                }
             }
             NotifyCheckResult(host, mrs.size, fresh, null)
         } catch (e: TokenInvalidException) {

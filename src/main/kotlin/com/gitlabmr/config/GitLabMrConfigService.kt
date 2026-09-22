@@ -1,5 +1,6 @@
 package com.gitlabmr.config
 
+import com.gitlabmr.notify.NotifyChannel
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.application.ApplicationManager
@@ -47,6 +48,12 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         var notifyIntervalMinutes: Int = DEFAULT_NOTIFY_INTERVAL_MINUTES,
         /** 已提醒过的 MR:key = web_url,value = 上次提醒时的 updated_at (值变化视为"有更新") */
         var notifiedMrs: MutableMap<String, String> = mutableMapOf(),
+        /** 通知方式:notice 气泡 (默认开启) */
+        var notifyViaBalloon: Boolean = true,
+        /** 通知方式:常驻弹窗 (不自动消失) */
+        var notifyViaWindow: Boolean = false,
+        /** 通知方式:系统通知 + 任务栏闪烁 (合并成一条通道,两者一起才有闭环) */
+        var notifyViaSystemFlash: Boolean = false,
     )
 
     private var state: State = State()
@@ -232,6 +239,23 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
             MIN_NOTIFY_INTERVAL_MINUTES,
             MAX_NOTIFY_INTERVAL_MINUTES,
         )
+        saveStateNow()
+    }
+
+    // 通知方式可叠加(勾选组合),每种一个开关;默认只开 notice 气泡
+
+    fun isChannelEnabled(channel: NotifyChannel): Boolean = when (channel) {
+        NotifyChannel.BALLOON -> state.notifyViaBalloon
+        NotifyChannel.WINDOW -> state.notifyViaWindow
+        NotifyChannel.SYSTEM_FLASH -> state.notifyViaSystemFlash
+    }
+
+    fun setChannelEnabled(channel: NotifyChannel, enabled: Boolean) {
+        when (channel) {
+            NotifyChannel.BALLOON -> state.notifyViaBalloon = enabled
+            NotifyChannel.WINDOW -> state.notifyViaWindow = enabled
+            NotifyChannel.SYSTEM_FLASH -> state.notifyViaSystemFlash = enabled
+        }
         saveStateNow()
     }
 
