@@ -28,10 +28,14 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     data class BranchEntry(var source: String = "", var target: String = "")
 
     data class State(
-        /** key = "$host/$projectPath" */
+        /** 历史版本的项目记忆: 仅用于升级时一次性并入全局历史, 之后不再写入 */
         var lastReviewers: MutableMap<String, String> = mutableMapOf(),
-        /** key = "$host/$projectPath" */
+        /** 历史版本的项目记忆: 仅用于升级时一次性并入全局历史, 之后不再写入 */
         var lastBranches: MutableMap<String, BranchEntry> = mutableMapOf(),
+        /** 全局共享的历史分支组合 (跨项目), 最近使用的在前 */
+        var recentBranchPairs: MutableList<BranchEntry> = mutableListOf(),
+        /** 全局共享的最近审核人 (跨项目), 最近使用的在前 */
+        var recentReviewers: MutableList<String> = mutableListOf(),
         /** key = 规范化后的 host，value = Personal Access Token (明文存于本机 XML) */
         var tokens: MutableMap<String, String> = mutableMapOf(),
         /** 已保存过 Token 的 GitLab 服务器地址 (供设置页展示) */
@@ -61,6 +65,36 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     override fun getState(): State = state
     override fun loadState(state: State) {
         this.state = state
+        migrateProjectMemory()
+    }
+
+    /**
+     * 历史版本按项目保存的分支 / 审核人, 升级时一次性并入跨项目共享的全局历史;
+     * 幂等: 全局历史已有数据时只清理遗留字段, 不再重复迁移。
+     */
+    private fun migrateProjectMemory() {
+        if (state.recentBranchPairs.isEmpty()) {
+            val seen = HashSet<Pair<String, String>>()
+            for (entry in state.lastBranches.values) {
+                if (entry.source.isBlank() || entry.target.isBlank() || entry.source == entry.target) continue
+                if (!seen.add(entry.source to entry.target)) continue
+                state.recentBranchPairs.add(entry)
+                if (state.recentBranchPairs.size >= MAX_BRANCH_PAIRS) break
+            }
+        }
+        if (state.recentReviewers.isEmpty()) {
+            val seen = HashSet<String>()
+            outer@ for (reviewers in state.lastReviewers.values) {
+                for (name in reviewers.split(",")) {
+                    val trimmed = name.trim()
+                    if (trimmed.isEmpty() || !seen.add(trimmed)) continue
+                    state.recentReviewers.add(trimmed)
+                    if (state.recentReviewers.size >= MAX_RECENT_REVIEWERS) break@outer
+                }
+            }
+        }
+        state.lastBranches.clear()
+        state.lastReviewers.clear()
     }
 
     // ------------------------------------------------------------------ //
@@ -190,32 +224,91 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
     }
 
     // ------------------------------------------------------------------ //
-    //  项目记忆 (上次分支 / 审核人) —— 供设置页查看与编辑
+    //  全局历史 (跨项目共享): 分支组合 / 审核人
     // ------------------------------------------------------------------ //
 
-    /** 所有有记忆的项目 key ("$host/$projectPath") */
-    fun projectKeys(): Set<String> = state.lastBranches.keys + state.lastReviewers.keys
+    /** 全局共享的历史分支组合 (最近使用的在前, 去重) */
+    fun recentBranchPairs(): List<BranchEntry> =
+        state.recentBranchPairs.distinctBy { it.source to it.target }
 
-    fun loadLastBranchesByKey(key: String): BranchEntry = state.lastBranches[key] ?: BranchEntry()
-
-    fun loadLastReviewersByKey(key: String): String = state.lastReviewers[key] ?: ""
-
-    fun updateLastBranches(key: String, source: String, target: String) {
-        state.lastBranches[key] = BranchEntry(source.trim(), target.trim())
+    /**
+     * 记录一对成功创建过 MR 的分支: 全局去重并置顶, 最多保留 [MAX_BRANCH_PAIRS] 条。
+     *
+     * 跨项目共享: 不同仓库常用同一组分支名 (如 dev-ss → dev), 创建对话框里可直接点选带出。
+     */
+    fun rememberBranchPair(source: String, target: String) {
+        val pair = BranchEntry(source.trim(), target.trim())
+        if (pair.source.isEmpty() || pair.target.isEmpty() || pair.source == pair.target) return
+        state.recentBranchPairs.removeAll { it.source == pair.source && it.target == pair.target }
+        state.recentBranchPairs.add(0, pair)
+        trimBranchPairs()
         saveStateNow()
     }
 
-    fun updateLastReviewers(key: String, reviewers: String) {
-        val trimmed = reviewers.trim()
-        if (trimmed.isEmpty()) state.lastReviewers.remove(key) else state.lastReviewers[key] = trimmed
+    /** 编辑一条历史分支组合 (历史记忆设置页): 旧值删除, 新值去重后置顶 */
+    fun updateBranchPair(oldSource: String, oldTarget: String, newSource: String, newTarget: String) {
+        val pair = BranchEntry(newSource.trim(), newTarget.trim())
+        if (pair.source.isEmpty() || pair.target.isEmpty() || pair.source == pair.target) return
+        state.recentBranchPairs.removeAll {
+            (it.source == oldSource && it.target == oldTarget) ||
+                (it.source == pair.source && it.target == pair.target)
+        }
+        state.recentBranchPairs.add(0, pair)
+        trimBranchPairs()
         saveStateNow()
     }
 
-    /** 删除某个项目的全部记忆 */
-    fun removeProjectMemory(key: String) {
-        state.lastBranches.remove(key)
-        state.lastReviewers.remove(key)
+    /** 删除一条历史分支组合 */
+    fun removeBranchPair(source: String, target: String) {
+        if (state.recentBranchPairs.removeAll { it.source == source && it.target == target }) {
+            saveStateNow()
+        }
+    }
+
+    private fun trimBranchPairs() {
+        while (state.recentBranchPairs.size > MAX_BRANCH_PAIRS) {
+            state.recentBranchPairs.removeAt(state.recentBranchPairs.size - 1)
+        }
+    }
+
+    /** 新行默认分支: 全局历史里最近的一条, 没有历史则 develop → develop */
+    fun defaultBranchPair(): BranchEntry =
+        recentBranchPairs().firstOrNull() ?: BranchEntry("develop", "develop")
+
+    /** 全局共享的最近审核人 (最近使用的在前, 去重) */
+    fun recentReviewers(): List<String> = state.recentReviewers.distinct()
+
+    /** 记录最近使用的审核人: 全局去重并置顶, 最多保留 [MAX_RECENT_REVIEWERS] 条 */
+    fun rememberReviewer(reviewer: String) {
+        val name = reviewer.trim()
+        if (name.isEmpty()) return
+        state.recentReviewers.removeAll { it == name }
+        state.recentReviewers.add(0, name)
+        trimReviewers()
         saveStateNow()
+    }
+
+    /** 编辑一条历史审核人 (历史记忆设置页): 旧值删除, 新值去重后置顶 */
+    fun updateReviewer(oldName: String, newName: String) {
+        val name = newName.trim()
+        if (name.isEmpty()) return
+        state.recentReviewers.removeAll { it == oldName || it == name }
+        state.recentReviewers.add(0, name)
+        trimReviewers()
+        saveStateNow()
+    }
+
+    /** 删除一条历史审核人 */
+    fun removeReviewer(name: String) {
+        if (state.recentReviewers.removeAll { it == name }) {
+            saveStateNow()
+        }
+    }
+
+    private fun trimReviewers() {
+        while (state.recentReviewers.size > MAX_RECENT_REVIEWERS) {
+            state.recentReviewers.removeAt(state.recentReviewers.size - 1)
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -300,28 +393,6 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  Reviewers
-    // ------------------------------------------------------------------ //
-
-    fun loadLastReviewers(projectKey: String): String =
-        state.lastReviewers[projectKey] ?: ""
-
-    fun saveLastReviewers(projectKey: String, usernames: String) {
-        state.lastReviewers[projectKey] = usernames
-    }
-
-    // ------------------------------------------------------------------ //
-    //  Branches
-    // ------------------------------------------------------------------ //
-
-    fun loadLastBranches(projectKey: String): BranchEntry =
-        state.lastBranches[projectKey] ?: BranchEntry()
-
-    fun saveLastBranches(projectKey: String, source: String, target: String) {
-        state.lastBranches[projectKey] = BranchEntry(source, target)
-    }
-
     companion object {
         /** 定时提醒默认间隔 (分钟) */
         const val DEFAULT_NOTIFY_INTERVAL_MINUTES: Int = 10
@@ -330,6 +401,12 @@ class GitLabMrConfigService : PersistentStateComponent<GitLabMrConfigService.Sta
 
         /** 已提醒 MR 记录的条数上限 */
         const val MAX_NOTIFIED_MR_ENTRIES: Int = 500
+
+        /** 全局历史分支组合的保留条数 */
+        const val MAX_BRANCH_PAIRS: Int = 15
+
+        /** 全局最近审核人的保留条数 */
+        const val MAX_RECENT_REVIEWERS: Int = 15
 
         fun getInstance(): GitLabMrConfigService =
             ApplicationManager.getApplication().getService(GitLabMrConfigService::class.java)

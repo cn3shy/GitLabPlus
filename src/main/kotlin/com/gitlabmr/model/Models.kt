@@ -58,6 +58,23 @@ data class MrCreateParams(
 )
 
 /**
+ * 批量创建中一行的结果 (Action → 通知 / 错误汇总传递)
+ *
+ * @param projectKey "$host/$projectPath", 成功后用于保存项目记忆
+ * @param success    该行是否创建成功; 失败时 [errorMessage] 有原因
+ */
+data class MrCreateOutcome(
+    val projectPath: String,
+    val projectKey: String,
+    val sourceBranch: String,
+    val targetBranch: String,
+    val title: String,
+    val success: Boolean,
+    val webUrl: String?,
+    val errorMessage: String?,
+)
+
+/**
  * 主干分支规则：只能作为 MR 的目标分支，不能作为源分支
  */
 object TrunkBranches {

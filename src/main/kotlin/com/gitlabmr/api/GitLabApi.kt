@@ -205,7 +205,7 @@ class GitLabApi(
                     ?: resp.get("url")?.asString
                 MrResult(success = true, webUrl = webUrl, errorMessage = null)
             } else {
-                MrResult(success = false, webUrl = null, errorMessage = "HTTP $code: ${body.take(300)}")
+                MrResult(success = false, webUrl = null, errorMessage = friendlyError(code, body))
             }
         } catch (e: Exception) {
             MrResult(success = false, webUrl = null, errorMessage = e.message ?: "未知错误")
@@ -253,8 +253,29 @@ class GitLabApi(
         }
     }
 
-    private fun getUserIds(baseUrl: String, usernames: String): List<Int> {
-        if (usernames.isBlank()) return emptyList()
+    /**
+     * GitLab 错误体转人话:
+     * {"message":"401 Unauthorized"} / {"message":{"source_branch":["does not exist"]}}
+     * -> "HTTP 400: source_branch: does not exist"
+     */
+    private fun friendlyError(code: Int, body: String): String {
+        val message = try {
+            val msg = JsonParser.parseString(body).asJsonObject.get("message")
+            when {
+                msg == null || msg.isJsonNull -> null
+                msg.isJsonPrimitive -> msg.asString
+                msg.isJsonObject -> msg.asJsonObject.entrySet().joinToString("；") { (field, value) ->
+                    "$field: ${value.toString().trim('"', '[', ']')}"
+                }
+                else -> null
+            }
+        } catch (ex: Exception) {
+            null
+        }
+        return if (message.isNullOrBlank()) "HTTP $code: ${body.take(200)}" else "HTTP $code: $message"
+    }
+
+    private fun getUserIds(baseUrl: String, usernames: String): List<Int> {        if (usernames.isBlank()) return emptyList()
         val ids = mutableListOf<Int>()
         for (name in usernames.split(",")) {
             val trimmed = name.trim()

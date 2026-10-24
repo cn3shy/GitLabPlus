@@ -1,6 +1,7 @@
 package com.gitlabmr.notify
 
 import com.gitlabmr.config.GitLabMrConfigService
+import com.gitlabmr.model.MrCreateOutcome
 import com.gitlabmr.model.MrCreateParams
 import com.gitlabmr.model.MrItem
 import com.gitlabmr.model.MrScopes
@@ -34,6 +35,9 @@ object MrNotifications {
 
     /** 通知里最多列出的 MR 条数,超出折叠成一行 */
     private const val MAX_ITEMS = 5
+
+    /** 批量创建结果里最多列出的条数 (成功 + 失败合计) */
+    private const val MAX_BATCH_ITEMS = 12
 
     /** "打开 MR"一次最多打开几个标签页 (一次提醒可能命中很多条) */
     private const val MAX_OPEN_URLS = 10
@@ -73,6 +77,51 @@ object MrNotifications {
             html = createdContent(projectKey, params, webUrl),
             urls = listOfNotNull(webUrl?.takeIf { it.isNotBlank() }),
             listScope = MrScopes.CREATED_BY_ME,
+        )
+    }
+
+    /**
+     * 批量创建 MR 的结果: 成功与失败列在同一封通知里
+     *
+     * 单行全成功时复用 [notifyMrCreated], 展示与旧版完全一致 (编号 / 标题 / 分支 / 审核人 / 项目);
+     * 多行时才用批量正文, 失败行给出可读原因。
+     */
+    fun notifyMrsCreated(
+        project: Project,
+        successes: List<MrCreateOutcome>,
+        failures: List<MrCreateOutcome>,
+        reviewer: String,
+    ) {
+        if (successes.size == 1 && failures.isEmpty()) {
+            val outcome = successes.first()
+            notifyMrCreated(
+                project = project,
+                projectKey = outcome.projectKey,
+                params = MrCreateParams(
+                    sourceBranch = outcome.sourceBranch,
+                    targetBranch = outcome.targetBranch,
+                    title = outcome.title,
+                    description = "",
+                    assigneeUsernames = reviewer,
+                    reviewerUsernames = reviewer,
+                ),
+                webUrl = outcome.webUrl,
+            )
+            return
+        }
+
+        val title = if (failures.isEmpty()) {
+            "${successes.size} 个 Merge Request 创建成功"
+        } else {
+            "${successes.size} 个成功，${failures.size} 个失败"
+        }
+        notifyByBalloon(
+            project = project,
+            title = title,
+            html = batchCreatedContent(successes, failures, reviewer),
+            urls = successes.mapNotNull { it.webUrl?.takeIf { url -> url.isNotBlank() } },
+            listScope = MrScopes.CREATED_BY_ME,
+            openLabel = if (successes.size > 1) "打开全部成功的 ${successes.size} 个 MR" else null,
         )
     }
 
@@ -128,9 +177,10 @@ object MrNotifications {
         html: String,
         urls: List<String>,
         listScope: String,
+        openLabel: String? = null,
     ) {
         val notification = Notification(GROUP_ID, title, html, NotificationType.INFORMATION)
-        buildActions(project, urls, listScope).forEach { (label, onClick) ->
+        buildActions(project, urls, listScope, openLabel).forEach { (label, onClick) ->
             notification.addAction(object : NotificationAction(label) {
                 override fun actionPerformed(e: AnActionEvent, notification: Notification) = onClick()
             })
@@ -175,6 +225,38 @@ object MrNotifications {
     }
 
     /**
+     * 批量正文: 成功行 "!12 标题 (项目路径) 源 → 目标", 失败行 "项目路径 源 → 目标 — 失败:原因"
+     */
+    private fun batchCreatedContent(
+        successes: List<MrCreateOutcome>,
+        failures: List<MrCreateOutcome>,
+        reviewer: String,
+    ): String = buildString {
+        val all = successes + failures
+        for (outcome in all.take(MAX_BATCH_ITEMS)) {
+            if (outcome.success) {
+                val iid = outcome.webUrl?.substringAfterLast("/merge_requests/", "")
+                    ?.takeIf { it.isNotBlank() && it.all(Char::isDigit) }
+                if (iid != null) append("!").append(iid).append(" ")
+                append("<b>").append(escape(outcome.title)).append("</b>")
+                append(" (").append(escape(outcome.projectPath)).append(") ")
+                append(escape(outcome.sourceBranch)).append(" → ")
+                    .append(escape(outcome.targetBranch)).append("<br>")
+            } else {
+                append(escape(outcome.projectPath)).append(" ")
+                append(escape(outcome.sourceBranch)).append(" → ").append(escape(outcome.targetBranch))
+                append(" — 失败:").append(escape(outcome.errorMessage ?: "未知错误")).append("<br>")
+            }
+        }
+        if (all.size > MAX_BATCH_ITEMS) {
+            append("… 还有 ").append(all.size - MAX_BATCH_ITEMS).append(" 条<br>")
+        }
+        if (reviewer.isNotBlank()) {
+            append("审核人:").append(escape(reviewer))
+        }
+    }
+
+    /**
      * HTML 正文转纯文本 (系统通知不支持 HTML)
      *
      * 正文只用了 <br> 和 <b> 两种标签,先还原换行再去标签;实体一律交给平台解码 ——
@@ -202,11 +284,13 @@ object MrNotifications {
         project: Project?,
         urls: List<String>,
         listScope: String,
+        openLabel: String? = null,
     ): List<Pair<String, () -> Unit>> {
         val actions = mutableListOf<Pair<String, () -> Unit>>()
         val targets = urls.filter { it.isNotBlank() }.distinct().take(MAX_OPEN_URLS)
         if (targets.isNotEmpty()) {
-            val label = if (targets.size == 1) "打开 MR" else "打开全部 ${targets.size} 个 MR"
+            val label = openLabel
+                ?: if (targets.size == 1) "打开 MR" else "打开全部 ${targets.size} 个 MR"
             actions += label to { targets.forEach { BrowserUtil.browse(it) } }
         }
         if (project != null) {
